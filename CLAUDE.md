@@ -1,7 +1,7 @@
-# CLAUDE.md — Vectorizer AI Developer & Agent Guide
+# CLAUDE.md — Vectorizer AI Master Architecture & Developer Guide
 
-> **Context for Claude / AI Assistants working on this codebase**  
-> Vectorizer AI is a production-quality, local-first raster-to-vector web application designed as an open-source alternative to Vectorizer.io. It runs 100% locally on Windows without requiring external APIs, cloud subscriptions, or API keys.
+> **Context for Claude / AI Assistants Auditing or Extending This Codebase**  
+> Vectorizer AI (formerly VectorForge AI) is an open-source, local-first raster-to-vector web application designed as a high-fidelity alternative to Vectorizer.io. It runs 100% locally on Windows without external APIs, cloud subscriptions, or API keys.
 
 ---
 
@@ -32,19 +32,19 @@ python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 cd c:\Users\Abid\Desktop\vector\vectorforge-ai\frontend
 npm run dev
 ```
-- Web UI: `http://localhost:5173` (proxies `/api`, `/temp`, `/health` to backend on port 8000)
+- Web UI: `http://localhost:5173` (Vite proxies `/api`, `/temp`, `/health` to backend port 8000)
 
-### Run Tests
+### Run Test Suite
 ```powershell
-# Pytest unit & integration tests
+# Pytest unit & integration tests (11/11 tests)
 cd c:\Users\Abid\Desktop\vector\vectorforge-ai
 python -m pytest backend/tests/test_vectorforge.py -v
 
-# End-to-end full pipeline HTTP test
+# End-to-end full HTTP pipeline test
 python tests/test_api_e2e.py
 ```
 
-### Build Frontend
+### Production Build
 ```powershell
 cd c:\Users\Abid\Desktop\vector\vectorforge-ai\frontend
 npm run build
@@ -52,81 +52,207 @@ npm run build
 
 ---
 
-## 3. Repository Architecture
+## 3. Core Principles: Vectorization vs. Raster Images
+
+Understanding what vectorization does — and how different types of imagery behave — is fundamental:
+
+### Category A: Flat Graphics, Logos, Icons & Line Art (Optimal)
+- **Nature**: Discrete color regions, solid shapes, sharp boundary edges, high contrast.
+- **Vector Output**: Mathematical Bézier curves (`<path d="...">`). 100% resolution-independent, razor-sharp at 2000% zoom.
+- **Workflow**: Instant 1-click vectorization using the **High** preset. No preprocessing or manual tuning required.
+- **Fine Lines & Concentric Circles**: Automatically routed to the **2x Nearest-Neighbor Supersampling Pipeline** (`trace_bw`), preserving 1px lines without notches or intersection webbing.
+
+### Category B: Complex Photographs, Banners & 3D Shaded Typography
+- **Nature**: Continuous tone gradients, soft lighting, photographic shadows, JPEG compression noise, and drop-shadows.
+- **What Happens if Traced Directly with High Precision**:
+  - Vector engines represent every color boundary as a distinct geometric polygon.
+  - In continuous-tone photographs or 3D shaded typography, there are hundreds of subtle gradient steps.
+  - Tracing raw RGB directly with `color_precision=7` and `layer_difference=12` forces the engine to carve out thousands of micro-polygons (e.g., 5,000+ paths).
+  - This results in stepped contour bands (posterization shards) that appear fragmented or jagged.
+- **Recommended Workflow for Photographic / Gradient Artwork**:
+  1. **Quantization**: Open the **Color Palette** panel and click **Quantize** (set to 4 to 12 colors). This flattens continuous-tone gradients into discrete artistic layers before tracing.
+  2. **Preset Selection**: Use **Balanced** or **Fast** preset (which applies higher `filter_speckle` to discard micro-shards).
+  3. **Crop / Isolation**: For banners containing photos with overlaid text, crop or isolate the graphic/text elements so photographic noise does not pollute the vectorizer.
+
+---
+
+## 4. End-to-End System Architecture & Data Flow
 
 ```
-vectorforge-ai/
-├── CLAUDE.md                    # This developer guide
-├── README.md                    # User and project overview
-├── CHANGELOG.md                 # Version release history
-├── TODO.md                      # Roadmap and planned enhancements
-├── backend/
-│   ├── requirements.txt         # Python dependencies
-│   ├── app/
-│   │   ├── main.py              # FastAPI app, CORS, routers, lifespan
-│   │   ├── core/
-│   │   │   ├── config.py        # Settings (pydantic-settings)
-│   │   │   └── session.py       # SessionManager (pipeline stages & temp files)
-│   │   ├── models/
-│   │   │   ├── requests.py      # Pydantic request models
-│   │   │   └── responses.py     # Pydantic response models
-│   │   ├── image_processing/
-│   │   │   ├── analyzer.py      # Color zones, complexity, edge density, mode recommendation
-│   │   │   ├── line_detector.py # Fine line detector & 2x supersampling without corner bulging
-│   │   │   ├── preprocessor.py  # Denoise, contrast, sharpen, bilateral filter, grayscale
-│   │   │   └── quantizer.py     # K-Means & Median-Cut color quantization & palette builder
-│   │   ├── vectorization/
-│   │   │   ├── base.py          # AbstractTracer interface
-│   │   │   ├── vtracer_engine.py# Primary engine (VTracer Rust wrapper)
-│   │   │   ├── contour_engine.py# Fallback B&W engine (OpenCV contours)
-│   │   │   └── engine_selector.py# Routes requests to appropriate engine
-│   │   ├── export/
-│   │   │   ├── svg_exporter.py  # SVG export with scour optimization
-│   │   │   └── png_exporter.py  # PNG export with resvg-py (Rust renderer)
-│   │   ├── utils/
-│   │   │   ├── file_utils.py    # Magic-byte MIME validation & temp management
-│   │   │   └── svg_optimizer.py # viewBox injection, layer extraction, scour
-│   │   └── api/routes/
-│   │       ├── upload.py        # POST /api/upload
-│   │       ├── analyze.py       # POST /api/analyze
-│   │       ├── preprocess.py    # POST /api/preprocess
-│   │       ├── quantize.py      # POST /api/quantize
-│   │       ├── vectorize.py     # POST /api/vectorize, GET /api/svg/{id}
-│   │       └── export.py        # POST /api/export/svg, POST /api/export/png
-│   └── tests/
-│       └── test_vectorforge.py  # Pytest suite
-├── frontend/
-│   ├── package.json             # React 19, Zustand, Axios, Lucide-React
-│   ├── vite.config.ts           # Dev server + backend proxy
-│   ├── tsconfig.json            # React-JSX bundler config
-│   ├── src/
-│   │   ├── main.tsx             # React entry point
-│   │   ├── App.tsx              # Shell layout + modal overlays
-│   │   ├── index.css            # Dark glassmorphism design system
-│   │   ├── store/
-│   │   │   └── appStore.ts      # Global Zustand state management
-│   │   ├── api/
-│   │   │   └── client.ts        # Axios API client
-│   │   └── components/
-│   │       ├── TopBar.tsx       # Mode switch, file name, export actions
-│   │       ├── DropZone.tsx     # Drag-and-drop & clipboard paste
-│   │       ├── PreviewCanvas.tsx# Zoom (up to 2000%), pan, split slider (isolated canvas zoom)
-│   │       ├── LeftPanel.tsx    # Preprocessing, quantization, tracing controls
-│   │       ├── RightPanel.tsx   # Color palette, layer toggling, SVG stats
-│   │       ├── ExportModal.tsx  # SVG/PNG multi-scale export modal dialog
-│   │       └── StatusBar.tsx    # Zoom level, dimensions, engine status
-├── samples/                     # Test images (PNG, B&W, logo, transparent)
-└── tests/
-    └── test_api_e2e.py          # Python E2E API test runner
+[User Upload (PNG/JPG/WebP/BMP)]
+               │
+               ▼
+   [POST /api/upload] ──► Validates Magic Bytes & Dimensions
+               │
+               ├──► Creates session in `backend/app/temp_files/<session_id>/`
+               │
+               ▼
+   [POST /api/analyze] ──► Color count, Edge density, Mode recommendation
+               │
+      ┌────────┴────────────────────────────────────────┐
+      ▼                                                 ▼
+[Optional: Preprocess]                         [Optional: Quantize]
+(Denoise, Contrast, Sharpen)                   (K-Means 2–64 colors)
+      │                                                 │
+      └────────────────────────┬────────────────────────┘
+                               ▼
+                    [POST /api/vectorize]
+                               │
+            ┌──────────────────┴──────────────────┐
+            ▼                                     ▼
+ [Monochrome Line Art]                   [Color / Graphic Mode]
+ (line_detector: 2x NN                   (vtracer: stacked hierarchy,
+  supersample, binary cutout)             spline fitting, scour optimize)
+            │                                     │
+            └──────────────────┬──────────────────┘
+                               ▼
+                     [Output SVG Generated]
+                               │
+              ┌────────────────┴────────────────┐
+              ▼                                 ▼
+   [Interactive Web Preview]           [POST /api/export]
+   - Zoom up to 2000%                  - Optimized SVG (Scour)
+   - Split Before/After Slider         - High-Res PNG (resvg-py 1x–8x)
+   - Layer Color Toggling
 ```
 
 ---
 
-## 4. Critical Technical Gotchas & Rules
+## 5. Backend Component Breakdown (`backend/app/`)
 
-### 1. `vtracer` Call Signature (CRITICAL)
-In `vtracer` 0.6.x (compiled with PyO3 for Python 3.14 on Windows), calling `convert_image_to_svg_py` with keyword arguments causes a PyO3 tuple parsing panic.  
-**Always call it with positional arguments:**
+### 1. `main.py`
+- FastAPI application entry point.
+- Configures CORS middleware allowing `http://localhost:5173` and local origins.
+- Mounts static `/temp` route to serve uploaded and generated session files.
+- Uses FastAPI `lifespan` context manager to initialize and gracefully clean up temp files.
+- Registers all API routers: `upload`, `analyze`, `preprocess`, `quantize`, `vectorize`, `export`.
+
+### 2. `core/session.py` (`SessionManager`)
+- Manages ephemeral in-memory session metadata alongside physical directories under `temp_files/<session_id>/`.
+- Tracks pipeline stages:
+  - `original_path`: Uploaded raster file.
+  - `preprocessed_path`: Post-denoise/sharpen image.
+  - `quantized_path`: Palette-reduced image.
+  - `svg_path`: Final generated SVG vector.
+- Handles automated session expiration and disk cleanup.
+
+### 3. `image_processing/line_detector.py`
+- **Purpose**: Detects thin delicate lines (1–2px), concentric radar circles, crosshairs, and engineering sketches.
+- **Algorithm**:
+  - `detect_line_art(img)`: Computes monochrome parity, foreground pixel ratio, and morphological cross-erosion thin line ratio (`thin_line_ratio > 0.15`).
+  - `enhance_fine_lines(img, scale=2)`: Uses **2x nearest-neighbor supersampling** (`cv2.INTER_NEAREST`).
+  - **Why Nearest-Neighbor**: Avoids morphological dilation or bicubic interpolation, ensuring concentric rings retain 100% 4-quadrant symmetry and crosshairs never produce corner bulging or intersection webbing.
+
+### 4. `image_processing/analyzer.py`
+- Computes image complexity metrics:
+  - Total unique colors and dominant color palette.
+  - Edge density via Canny edge detection.
+  - Saturation mean and luminance variance.
+  - Recommends optimal tracing mode: `logo`, `illustration`, `sketch`, `bw`, or `photo`.
+
+### 5. `image_processing/preprocessor.py`
+- OpenCV-based image conditioning before tracing:
+  - Bilateral and Gaussian noise reduction.
+  - CLAHE (Contrast Limited Adaptive Histogram Equalization).
+  - Unsharp mask sharpening to crisp up blurry raster text glyphs.
+  - Thresholding and automatic background color removal.
+
+### 6. `image_processing/quantizer.py`
+- Color reduction pipeline:
+  - **K-Means Clustering**: Uses OpenCV `cv2.kmeans` to cluster continuous colors into `k` centroids (2 to 64 colors).
+  - **Median-Cut**: Alternative box-splitting quantization algorithm.
+  - Extracts structured palette swatches with hex codes, RGB values, and pixel coverage percentages.
+
+### 7. `vectorization/vtracer_engine.py` (`VTracerEngine`)
+- Primary vectorization engine wrapping the Rust `vtracer` library.
+- **Key Methods**:
+  - `trace()`: Handles full-color vectorization using `hierarchical="stacked"` to prevent seam gaps and perimeter notches.
+  - `trace_bw()`: Handles line art using 2x supersampling, `hierarchical="cutout"`, and automatic background rect injection.
+- **Quality Presets**:
+  - `fast`: Polygon mode, `color_precision=4`, `layer_difference=24`, `filter_speckle=2`.
+  - `balanced`: Spline mode, `color_precision=7`, `layer_difference=16`, `filter_speckle=1`.
+  - `high` (Default): Spline mode, `color_precision=7`, `layer_difference=12`, `filter_speckle=1`, `path_precision=6`.
+  - `ultra`: Spline mode, `color_precision=8`, `layer_difference=6`, `filter_speckle=0`.
+
+### 8. `vectorization/contour_engine.py` (`ContourEngine`)
+- Pure Python/OpenCV fallback engine for monochrome line art.
+- Uses `cv2.findContours(cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)` with `cv2.approxPolyDP`.
+- Generates compound SVG paths with `fill-rule="evenodd"`, ensuring concentric nested rings do not fill as solid black disks.
+
+### 9. `vectorization/engine_selector.py`
+- Intelligently routes vectorization requests:
+  - If `image_mode == "auto"`, runs `detect_line_art`. If fine line art is detected, routes to `VTracerEngine.trace_bw`.
+  - Otherwise, routes to `VTracerEngine.trace` (color mode).
+  - Automatically falls back to `ContourEngine` if Rust VTracer encounters an unrecoverable condition.
+
+### 10. `utils/svg_optimizer.py`
+- `ensure_viewbox(svg_content)`: Guarantees SVG root contains `viewBox="0 0 W H"` matching width and height.
+- `validate_svg(svg_content)`: Uses `lxml.etree` to verify XML well-formedness, counts paths, groups, and unique fill colors.
+- `extract_layers_from_svg(svg_content)`: Parses distinct fill colors and builds the layer tree for UI toggling.
+- `optimize_svg(svg_content)`: Runs `scour` to strip redundant XML metadata, formatting whitespace, and unneeded tags.
+
+### 11. `export/png_exporter.py` & `export/svg_exporter.py`
+- High-fidelity raster export via `resvg_py` (Rust-based SVG renderer).
+- Supports 1x, 2x, 4x, and 8x scale multipliers (rendering crisp PNGs up to 16,000px without blur).
+- Supports transparent or custom background fills.
+
+---
+
+## 6. Frontend Component Breakdown (`frontend/src/`)
+
+### 1. `store/appStore.ts` (Zustand)
+- Centralized reactive state store managing:
+  - `sessionId`, `stage` (`idle`, `uploading`, `analyzing`, `quantizing`, `vectorizing`, `exporting`, `error`).
+  - `imageInfo` and `analysisResult`.
+  - `preprocessSettings`, `vectorizeSettings`, and `numColors`.
+  - `viewMode` (`original`, `enhanced`, `vector`) and `showSplitView`.
+  - `zoom` (0.05x to 20x) and `pan` offset coordinates.
+  - `layers` array with visibility toggling.
+
+### 2. `components/PreviewCanvas.tsx`
+- Interactive viewport supporting smooth focal-point zoom (up to 2000%) and pan dragging.
+- **Non-Passive Wheel Listener**:
+  - Attached with `{ passive: false }` to intercept `e.preventDefault()`, completely preventing browser page zoom when users scroll or pinch on the canvas.
+- **Split View**:
+  - Draggable center divider comparing before and after.
+  - **Left Side**: Original source image.
+  - **Right Side**: Vector SVG output.
+  - Features floating indicators (`Original` and `Vector Output`) so users instantly understand the comparison.
+  - Toolbar buttons automatically synchronize with the split state.
+
+### 3. `components/LeftPanel.tsx`
+- Accordion studio controls for:
+  - **Image Mode**: Auto, Logo, Photo, Sketch, B&W.
+  - **Quality Preset**: Fast, Balanced, High, Ultra.
+  - **Color Quantization**: Palette slider (2–64 colors) and one-click "Quantize" action.
+  - **Advanced Tracing Sliders**: Filter speckle, color precision, layer difference, corner threshold, length threshold.
+  - **One-Click "◈ Vectorize" Action Button**.
+
+### 4. `components/RightPanel.tsx`
+- **Vector Stats**: Path count, color count, file size, dimensions.
+- **Layer Manager**: Displays color swatches, hex codes, path counts per color, and toggle switches to show/hide individual SVG layers in real time.
+
+### 5. `components/TopBar.tsx`
+- Top header with logo, file upload trigger, reset button, and export action.
+- **Downward-Oriented Tooltips**: Configured to render downwards (`top: calc(100% + 8px)`) to prevent top-edge clipping in desktop viewports.
+
+### 6. `components/ExportModal.tsx`
+- Dialog modal for downloading:
+  - **SVG**: Cleaned, scour-optimized scalable vector file.
+  - **PNG**: Rendered via `resvg` with scale multipliers (1x, 2x, 4x, 8x) and background choice (transparent or solid).
+
+### 7. `index.css`
+- Bespoke modern dark glassmorphism design system:
+  - Curated color tokens (`--bg-primary`, `--accent-primary`, `--border-default`, etc.).
+  - Responsive layout media queries (`> 1080px` 3-column, `<= 820px` mobile segmented tabs, `<= 460px` compact header).
+
+---
+
+## 7. Critical Technical Constraints (Must-Follow Rules)
+
+### Rule 1: `vtracer` Positional Arguments Only (CRITICAL)
+In `vtracer` 0.6.x on Windows Python 3.14, calling `convert_image_to_svg_py` with keyword arguments crashes with a PyO3 tuple parsing panic.  
+**Always pass exactly 13 positional arguments in order:**
 ```python
 vtracer.convert_image_to_svg_py(
     str(image_path),        # 1: input path
@@ -137,137 +263,52 @@ vtracer.convert_image_to_svg_py(
     filter_speckle,         # 6: int
     color_precision,        # 7: int (1-8)
     layer_difference,       # 8: int
-    corner_threshold,       # 9: int (degrees, e.g. 60)
-    length_threshold,       # 10: float (e.g. 4.0)
-    max_iterations,         # 11: int (e.g. 10)
-    splice_threshold,       # 12: int (e.g. 45)
-    path_precision,         # 13: int (decimal places)
+    corner_threshold,       # 9: int (degrees)
+    length_threshold,       # 10: float
+    max_iterations,         # 11: int
+    splice_threshold,       # 12: int
+    path_precision,         # 13: int
 )
 ```
 
-### 2. High-Fidelity SVG Rasterization (`resvg-py`)
-Do not use `cairosvg` on Windows because it requires external GTK/cairo C libraries.  
-Instead, `resvg-py` is installed and used. It is a self-contained Rust engine providing pixel-perfect SVG rendering at arbitrary zoom factors:
-```python
-import resvg_py
-png_bytes = resvg_py.svg_to_bytes(
-    svg_string=svg_content,
-    zoom=float(scale),
-    background=background_color,
-)
-```
+### Rule 2: Always Use `hierarchical="stacked"` for Color Images
+- In `cutout` mode, separate path fitting creates micro-gaps between adjacent polygons. Against dark canvas backgrounds, these appear as **black triangular wedges**.
+- In `stacked` mode, lower color layers form continuous foundations, guaranteeing zero seam gaps, smooth circular arcs, and clean color transitions.
 
-### 3. SVG `viewBox` Attribute
-VTracer generates `<svg width="W" height="H">` without a `viewBox`.  
-Always pass SVG content through `utils.svg_optimizer.ensure_viewbox(svg_content)` before saving or returning. This adds `viewBox="0 0 W H"`, which is mandatory for responsive scaling and 2000% crisp browser rendering without clipping.
+### Rule 3: Always Use 2x Nearest-Neighbor for Fine Line Art
+- Do not apply morphological dilation or Gaussian blur to 1px line drawings. It causes line pinching at crosshairs and triangle webbing at intersections.
+- The 2x nearest-neighbor supersampling pipeline cleanly doubles the coordinate space, enabling Rust VTracer to preserve 100% circularity and symmetry.
 
-### 4. Fine Line & Concentric Circle Preservation (Line Art / B&W Mode)
-- 1-pixel lines (radar rings, concentric circles, technical sketches, wireframes) have zero area in standard single-pixel polygonal tracing.
-- If morphological erosion or selective dilation is used, thin circles become severed at crosshair intersections (pinching down to 1px bottlenecks), and VTracer's winding rules invert the quadrant polygons, resulting in huge solid black wedges and dropped circle arcs.
-- **Permanent Solution: 2x Supersampling Pipeline (`trace_bw`)**:
-  1. `engine_selector.py` auto-detects monochrome line art (`detect_line_art`) and routes to `trace_bw`.
-  2. `line_detector.py` performs **2x clean nearest-neighbor supersampling** without morphological erosion or cross dilation. This cleanly expands 1px lines to 2px in coordinate space without pinching or flaring at junctions.
-  3. `vtracer` runs in `colormode="binary"`, `hierarchical="cutout"`, `mode="spline"`, `filter_speckle=0`, `length_threshold=2.0`. This preserves 100% of concentric circles and fine lines with mathematical symmetry.
-  4. `vtracer_engine.py` formats the SVG root to preserve the original 1x dimensions with sub-pixel vector resolution: `width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w*2} {orig_h*2}"`.
-  5. If the source image was non-transparent, an opaque white background `<rect width="100%" height="100%" fill="#ffffff"/>` is automatically injected behind the paths.
-  6. In `ContourEngine`, uses `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`) so nested concentric shapes never fill as solid black disks.
+### Rule 4: Always Inject SVG `viewBox`
+- VTracer emits `<svg width="W" height="H">` without a `viewBox`.
+- Always pass output SVGs through `ensure_viewbox(svg_content)` to inject `viewBox="0 0 W H"`. Without this, SVGs will clip or scale incorrectly when embedded in responsive HTML or canvas views.
 
-### 5. Color Vectorization & Hierarchy Rule (CRITICAL)
-- **Always use `hierarchical="stacked"` for color images and logos (`trace`)**:
-  - In `cutout` mode, independently fitted Bézier splines leave microscopic gaps (e.g. 1,632 transparent gap pixels on complex shapes). Over dark canvas backgrounds (like `.preview-area.checkerboard` `#121316`), these transparent seams bleed through as **black triangular wedges** at line intersections and polygon junctions.
-  - In `cutout` mode, circular rims are split into disjoint halves (e.g. Path 9 and Path 13) causing stepped perimeter notches/dents.
-  - In `stacked` mode, background and base layers are continuous solids (`holes == 0`), completely eliminating transparent gap leaks, black triangles, and perimeter notches while maintaining smooth circular curvature.
-- **Default Presets**: `QUALITY_PRESETS["high"]` and `appStore.ts` default to `filter_speckle=1`, `color_precision=7`, `layer_difference=12`, `length_threshold=2.0`, `path_precision=6` for instant, one-click pristine vectorization.
-
-### 6. Text & Typography Vectorization
-- **Vector Outlines (Glyphs)**: Raster text in logos, slogans, badges, and headers is vectorized into resolution-independent Bézier curve paths (`<path>`). Text never pixelates or blurs even at 2000% zoom.
-- **Letter Counters (Holes)**: Letters with interior enclosures (such as 'O', 'A', 'P', 'B', 'D', '8') are carved out cleanly via compound SVG paths / subpaths.
-- **Diacritics & Punctuation**: `filter_speckle=1` ensures dots on 'i' and 'j', periods, commas, and small quotation marks are preserved rather than pruned as noise.
-- **Blurry Text Enhancement**: For low-resolution raster text, enable **Sharpen Image** (strength `0.5`–`0.8`) in the Preprocessing panel before tracing to crisp up glyph contours.
-
-### 7. Pydantic Settings
-Settings are declared using `pydantic_settings.BaseSettings` (not `pydantic.BaseSettings` which was removed in Pydantic v2).
-
-### 8. Frontend Imports
-All component imports in `frontend/src/components/*.tsx` import from `../store/appStore` and `../api/client` (single `../`, not double `../../`).
+### Rule 5: Use `resvg_py` for PNG Export
+- Never use `cairosvg` on Windows (requires external GTK DLLs).
+- Use `resvg_py.svg_to_bytes(svg_string=..., zoom=scale, background=...)`.
 
 ---
 
-## 5. Pipeline Stages
+## 8. Audit & Verification Checklist for Claude
 
-1. **Upload**: Validates magic bytes (PNG, JPG, BMP, WebP) and dimensions (up to 4096×4096). Creates session folder in `temp_files/<session_id>/`.
-2. **Analyze**: Computes edge density, color variance, unique color zones, and recommends mode (`logo`, `illustration`, `sketch`, `bw`, `photo`).
-3. **Preprocess**: OpenCV pipeline: bilateral/Gaussian denoise, CLAHE contrast enhancement, unsharp mask sharpening, thresholding, grayscale conversion.
-4. **Quantize**: K-Means clustering or Median-Cut algorithm to reduce colors to 2–64 discrete tones. Returns structured palette with RGB, hex, and coverage percentages.
-5. **Vectorize**:
-   - `VTracerEngine`: Rust spline fitting for smooth Bezier curves.
-   - `ContourEngine`: OpenCV `findContours` + `approxPolyDP` fallback for monochrome artwork.
-6. **Export**:
-   - SVG: Cleans with `scour` (removes redundant metadata while preserving viewBox and paths).
-   - PNG: Renders via `resvg` at 1x, 2x, 4x, 8x with transparent or custom background.
+When auditing or reviewing changes to this codebase, execute the following verification steps:
 
----
-
-## 6. How to Extend
-
-- **Add a new vectorizer engine**: Inherit from `AbstractTracer` in `vectorization/base.py`, implement `trace()`, and register it in `engine_selector.py`.
-- **Add custom preset**: Update `QUALITY_PRESETS` in `vtracer_engine.py` and the corresponding frontend presets in `LeftPanel.tsx`.
-- **Add export formats**: Extend `export/` with EPS or PDF exporters (ReportLab can render `resvg` PNGs or convert SVG directly to PDF).
-
----
-
-## 7. Frontend Responsive Architecture & Tooltip System
-
-### Responsive Layout Strategy
-The web UI dynamically adapts across three primary screen tiers:
-1. **Desktop (> 1080px)**:
-   - Full 3-column studio layout: `LeftPanel` (280px) | `PreviewCanvas` (flex: 1) | `RightPanel` (260px).
-   - All sidebars and canvas are concurrently visible.
-2. **Laptop & Tablet Landscape (821px – 1080px)**:
-   - Adaptive panel widths (`LeftPanel`: 245px, `RightPanel`: 225px) allowing the center canvas 350px–610px of interactive space.
-3. **Tablet Portrait & Mobile (<= 820px)**:
-   - Sidebars are encapsulated inside `.responsive-panel-wrapper`.
-   - A segmented mobile workspace tab bar renders below the TopBar:
-     - `🎛 Controls`: Expands `LeftPanel` to 100% viewport width for configuring sliders and tapping `◈ Vectorize`.
-     - `👁 Canvas`: Expands `PreviewCanvas` to 100% viewport width with full zoom, pan, and split-view controls.
-     - `🎨 Layers`: Expands `RightPanel` to 100% viewport width to view swatches and toggle layer visibility.
-   - Auto-switches to `Canvas` tab upon image upload or vectorization completion for immediate visual feedback.
-   - Eliminates horizontal window scrolling and layout squishing.
-
-### Breakpoints Table
-| Breakpoint | Target Devices | Layout Adjustments |
-|---|---|---|
-| `> 1080px` | Desktop / Wide Monitors | Standard 3-column layout (280px / flex:1 / 260px) |
-| `821px – 1080px` | Small Laptops / Tablets | Compressed 3-column layout (245px / flex:1 / 225px) |
-| `<= 820px` | Tablets / Large Phones | Segmented tabs (`Controls`, `Canvas`, `Layers`) with 100% width active panel |
-| `<= 640px` | Phones (Portrait) | Compact TopBar (48px), hides PNG scale multipliers, hides non-essential status items |
-| `<= 460px` | Small Phones | Icon-only logo `[V]` and upload button `⬆` to prevent header overflow |
-
-### Tooltip Positioning Rules
-- **Problem**: Elements near the top edge of the browser viewport (like `TopBar` buttons) have their tooltips hidden/clipped when positioned above (`bottom: calc(100% + 6px)`).
-- **Solution**:
-  - All `.topbar [data-tooltip]::after` and elements with `[data-tooltip-pos="bottom"]` render **downward** (`top: calc(100% + 8px); bottom: auto;`).
-  - Elements on the far right (e.g. `TopBar` export actions) use `[data-tooltip-align="right"]` with `left: auto; right: 0; transform: none;` to avoid overflowing beyond the right viewport margin.
-  - Styled with high-contrast dark elevated background (`var(--bg-elevated)`), crisp border (`var(--border-strong)`), `z-index: 9999`, and smooth opacity transition.
-
----
-
-## 8. Verification & Quality Assurance Checklist
-
-Always verify these after making changes:
 ```powershell
-# 1. Backend Pytest suite (11 tests, including color circle & line art preservation)
+# 1. Run full backend pytest suite (all 11 tests must pass)
+cd c:\Users\Abid\Desktop\vector\vectorforge-ai
 python -m pytest backend/tests/test_vectorforge.py -v
 
-# 2. End-to-end HTTP pipeline test
+# 2. Run end-to-end HTTP pipeline test
 python tests/test_api_e2e.py
 
-# 3. Frontend production build
+# 3. Verify frontend production TypeScript build
 cd frontend
 npm run build
 ```
-- Browser check at `http://localhost:5173/`:
-  - Upload image -> check instant preview.
-  - Hover over TopBar buttons (`Upload`, `Reset`, `⬇ SVG`, `⬇ PNG`, `2x`, `4x`, `8x`) -> verify tooltip renders downwards and remains fully visible.
-  - Resize browser window from 1280px down to 768px and 480px -> verify mobile tabs work smoothly with zero horizontal overflow.
 
+### Manual Verification Checks
+1. **Concentric Circles**: Upload a circle radar target with crosshairs -> Vectorize -> Verify in Split View at 300%+ zoom that circles are smooth, complete, and crosshair intersections have zero black webbing or severed lines.
+2. **Text / Logo Graphics**: Upload a logo with text -> Vectorize -> Check that interior letter holes (e.g., 'O', 'A', 'P') are carved out cleanly via compound paths.
+3. **Photographic Artwork**: For images with gradients or drop shadows, verify that running **Quantize** (4–8 colors) before vectorizing produces clean artistic vector planes rather than thousands of fragmented polygon shards.
+4. **Canvas Zooming**: Scroll mouse wheel over the preview canvas -> Verify only the canvas zooms and the outer browser page does not scale.
+5. **Tooltips**: Hover over TopBar buttons (`Upload`, `Reset`, `⬇ SVG`, `⬇ PNG`) -> Verify tooltips render downward and remain fully on-screen.

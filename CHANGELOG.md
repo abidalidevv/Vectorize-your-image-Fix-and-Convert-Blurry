@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-09-05
+
+### Added
+- **Split View Floating Indicators**:
+  - Added floating status badges (`Original` on top-left and `Vector Output` on top-right) inside `PreviewCanvas` to clearly distinguish between the input raster and vectorized output.
+  - Refined toolbar tab active states to seamlessly toggle off when Split mode is active.
+- **Master Developer & Audit Documentation (`CLAUDE.md`)**:
+  - Comprehensive rewrite of `CLAUDE.md` providing complete subsystem breakdowns, continuous-tone vs flat vector categorization, quantization recommendations for photographic posters, and full verification steps for future Claude audits.
+
+---
+
 ## [1.0.5] - 2026-09-04
 
 ### Fixed

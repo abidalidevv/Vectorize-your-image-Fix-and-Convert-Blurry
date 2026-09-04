@@ -148,8 +148,13 @@ export default function PreviewCanvas() {
         {viewTabs.map(tab => (
           <button
             key={tab.id}
-            className={`view-tab ${viewMode === tab.id ? 'active' : ''}`}
-            onClick={() => tab.available && setViewMode(tab.id)}
+            className={`view-tab ${!showSplit && viewMode === tab.id ? 'active' : ''}`}
+            onClick={() => {
+              if (tab.available) {
+                setShowSplit(false)
+                setViewMode(tab.id)
+              }
+            }}
             style={{ opacity: tab.available ? 1 : 0.35, cursor: tab.available ? 'pointer' : 'default' }}
             title={tab.available ? tab.label : `${tab.label} (not yet generated)`}
           >
@@ -211,6 +216,28 @@ export default function PreviewCanvas() {
       ) : (
         /* Split View */
         <div style={{ position:'relative', width:'100%', height:'100%', overflow:'hidden' }}>
+          {/* Floating Indicators for Split View */}
+          <div style={{
+            position: 'absolute', top: 12, left: 16, zIndex: 10,
+            background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
+            color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: 6,
+            fontSize: 11, fontWeight: 600, pointerEvents: 'none',
+            border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8' }} />
+            Original
+          </div>
+          <div style={{
+            position: 'absolute', top: 12, right: 16, zIndex: 10,
+            background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
+            color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: 6,
+            fontSize: 11, fontWeight: 600, pointerEvents: 'none',
+            border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />
+            Vector Output
+          </div>
+
           {/* Left side: original */}
           <div
             style={{
@@ -251,11 +278,12 @@ export default function PreviewCanvas() {
             <div style={{
               position:'absolute', top:'50%', left:'50%',
               transform:'translate(-50%,-50%)',
-              width:20, height:20, borderRadius:'50%',
+              width:22, height:22, borderRadius:'50%',
               background:'var(--accent-primary)',
               border:'2px solid white',
               display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:10, color:'white', userSelect:'none',
+              fontSize:11, color:'white', userSelect:'none',
+              boxShadow:'0 2px 8px rgba(0,0,0,0.5)',
             }}>⇔</div>
           </div>
         </div>
