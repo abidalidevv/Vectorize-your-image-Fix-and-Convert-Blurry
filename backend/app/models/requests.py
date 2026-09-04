@@ -42,6 +42,7 @@ class VectorizeParams(BaseModel):
     session_id: str
     image_mode: Literal["auto", "logo", "photo", "sketch", "bw"] = "auto"
     quality_preset: Literal["fast", "balanced", "high", "ultra"] = "balanced"
+    source_stage: Literal["auto", "original", "preprocessed", "quantized"] = "auto"
 
     # Tracing parameters
     color_precision: int = Field(default=6, ge=1, le=8)

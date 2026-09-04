@@ -96,6 +96,11 @@ export async function uploadImage(file: File): Promise<ImageInfo> {
   return data
 }
 
+export async function getSessionStatus(sessionId: string) {
+  const { data } = await api.get(`/api/session/${sessionId}/status`)
+  return data
+}
+
 // ── Analyze ────────────────────────────────────────────────────────────────
 export async function analyzeImage(sessionId: string): Promise<AnalysisResult> {
   const { data } = await api.post<AnalysisResult>('/api/analyze', { session_id: sessionId })
@@ -150,6 +155,7 @@ export async function vectorizeImage(params: {
   simplify_tolerance?: number
   group_by_color?: boolean
   remove_background?: boolean
+  source_stage?: string
 }): Promise<VectorizeResult> {
   const { data } = await api.post<VectorizeResult>('/api/vectorize', params)
   return data

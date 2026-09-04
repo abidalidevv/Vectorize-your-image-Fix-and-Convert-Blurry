@@ -2,6 +2,7 @@
  * VectorForge AI — Global Application State (Zustand)
  */
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type {
   ImageInfo,
   AnalysisResult,
@@ -15,6 +16,7 @@ export type ImageMode = 'auto' | 'logo' | 'photo' | 'sketch' | 'bw'
 export type QualityPreset = 'fast' | 'balanced' | 'high' | 'ultra'
 export type ProcessingStage = 'idle' | 'uploading' | 'analyzing' | 'preprocessing' | 'quantizing' | 'vectorizing' | 'exporting' | 'error'
 export type MobileTab = 'controls' | 'canvas' | 'layers'
+export type VectorizeSourceStage = 'auto' | 'original' | 'preprocessed' | 'quantized'
 
 export interface PreprocessSettings {
   denoiseEnabled: boolean
@@ -57,6 +59,7 @@ export interface AppState {
 
   // Processing settings
   numColors: number
+  vectorizeSourceStage: VectorizeSourceStage
   preprocessSettings: PreprocessSettings
   vectorizeSettings: VectorizeSettings
 
@@ -86,6 +89,7 @@ export interface AppState {
   updatePreprocessSettings: (s: Partial<PreprocessSettings>) => void
   updateVectorizeSettings: (s: Partial<VectorizeSettings>) => void
   setNumColors: (n: number) => void
+  setVectorizeSourceStage: (stage: VectorizeSourceStage) => void
   setViewMode: (mode: ViewMode) => void
   setZoom: (zoom: number | ((prev: number) => number)) => void
   setSplitPosition: (pos: number) => void
@@ -116,8 +120,8 @@ const DEFAULT_VECTORIZE: VectorizeSettings = {
   qualityPreset: 'high',
   colorPrecision: 7,
   layerDifference: 12,
-  cornerThreshold: 60,
-  lengthThreshold: 2.0,
+  cornerThreshold: 75,
+  lengthThreshold: 9.0,
   filterSpeckle: 1,
   curveFitting: 'spline',
   minArea: 1.0,
@@ -125,13 +129,16 @@ const DEFAULT_VECTORIZE: VectorizeSettings = {
   groupByColor: true,
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
   sessionId: null,
   stage: 'idle',
   errorMessage: null,
   imageInfo: null,
   analysisResult: null,
-  numColors: 8,
+  numColors: 24,
+  vectorizeSourceStage: 'auto',
   preprocessSettings: DEFAULT_PREPROCESS,
   vectorizeSettings: DEFAULT_VECTORIZE,
   preprocessedUrl: null,
@@ -184,6 +191,7 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({ vectorizeSettings: { ...state.vectorizeSettings, ...s } })),
 
   setNumColors: (n) => set({ numColors: n }),
+  setVectorizeSourceStage: (stage) => set({ vectorizeSourceStage: stage }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setZoom: (zoom) =>
     set((state) => ({
@@ -213,10 +221,32 @@ export const useAppStore = create<AppState>((set) => ({
       palette: [],
       vectorResult: null,
       layers: [],
+      vectorizeSourceStage: 'auto',
       viewMode: 'original',
       zoom: 1,
       mobileTab: 'canvas',
       preprocessSettings: DEFAULT_PREPROCESS,
       vectorizeSettings: DEFAULT_VECTORIZE,
     }),
-}))
+  }),
+  {
+    name: 'vectorizer-ai-store',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        sessionId: state.sessionId,
+        imageInfo: state.imageInfo,
+        analysisResult: state.analysisResult,
+        preprocessedUrl: state.preprocessedUrl,
+        quantizedUrl: state.quantizedUrl,
+        palette: state.palette,
+        vectorResult: state.vectorResult,
+        layers: state.layers,
+        viewMode: state.viewMode,
+        numColors: state.numColors,
+        vectorizeSourceStage: state.vectorizeSourceStage,
+        preprocessSettings: state.preprocessSettings,
+        vectorizeSettings: state.vectorizeSettings,
+      }),
+    }
+  )
+)

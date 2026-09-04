@@ -195,7 +195,7 @@ class VTracerEngine(AbstractTracer):
             # Fine line detail preservation
             trace_image_path = image_path
             temp_enhanced_path = image_path.parent / f"{image_path.stem}_fine_enhanced_bw.png"
-            scale_factor = 2
+            scale_factor = 4 if max(orig_h, orig_w) <= 1500 else 2
             enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path, scale=scale_factor)
 
             mode = self._get_mode(params)
@@ -205,7 +205,7 @@ class VTracerEngine(AbstractTracer):
                 colormode = "binary"
                 hierarchical = "cutout"
                 filter_speckle = 0
-                length_threshold = min(float(params.get("length_threshold", 2.0)), 2.0)
+                length_threshold = float(params.get("length_threshold", 9.0))
                 used_scale = scale_factor
             else:
                 colormode = "color"
@@ -216,7 +216,7 @@ class VTracerEngine(AbstractTracer):
 
             color_precision = 2
             layer_difference = 16
-            corner_threshold = int(params.get("corner_threshold", preset["corner_threshold"]))
+            corner_threshold = int(params.get("corner_threshold", 75))
             max_iterations = int(params.get("max_iterations", preset["max_iterations"]))
             splice_threshold = int(params.get("splice_threshold", preset["splice_threshold"]))
             path_precision = int(preset.get("path_precision", 6))

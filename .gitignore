@@ -38,6 +38,7 @@ venv.bak/
 htmlcov/
 .tox/
 .nox/
+scratch/
 
 # Temporary storage & session files
 temp_files/

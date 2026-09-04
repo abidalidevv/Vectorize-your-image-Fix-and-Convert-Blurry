@@ -66,6 +66,7 @@ export default function LeftPanel() {
   const {
     sessionId, stage, imageInfo, analysisResult, vectorResult,
     preprocessSettings, vectorizeSettings, numColors,
+    vectorizeSourceStage, setVectorizeSourceStage,
     setStage, setPreprocessedUrl, setQuantized, setVectorResult, setAnalysisResult,
     updatePreprocessSettings, updateVectorizeSettings, setNumColors,
     setViewMode, setShowExportModal,
@@ -146,6 +147,7 @@ export default function LeftPanel() {
         min_area: vectorizeSettings.minArea,
         simplify_tolerance: vectorizeSettings.simplifyTolerance,
         group_by_color: vectorizeSettings.groupByColor,
+        source_stage: vectorizeSourceStage,
       })
       setVectorResult(result)
       setViewMode('vector')
@@ -329,6 +331,42 @@ export default function LeftPanel() {
             >
               {stage === 'quantizing' ? <><span className="spinner" style={{width:12,height:12}} /> Quantizing…</> : '🎨 Reduce Colors'}
             </button>
+
+            <div className="control-group" style={{marginTop: 10}}>
+              <div className="control-label">
+                <span>Vectorize Source</span>
+                <span className="value-display" style={{textTransform: 'capitalize'}}>{vectorizeSourceStage}</span>
+              </div>
+              <div className="segment-tabs">
+                <button
+                  type="button"
+                  className={`segment-tab ${vectorizeSourceStage === 'auto' ? 'active' : ''}`}
+                  onClick={() => setVectorizeSourceStage('auto')}
+                  disabled={isProcessing}
+                  title="Auto: uses quantized for logos if available, otherwise original/preprocessed"
+                >
+                  Auto
+                </button>
+                <button
+                  type="button"
+                  className={`segment-tab ${vectorizeSourceStage === 'original' ? 'active' : ''}`}
+                  onClick={() => setVectorizeSourceStage('original')}
+                  disabled={isProcessing}
+                  title="Force using original image for vectorization"
+                >
+                  Use Original
+                </button>
+                <button
+                  type="button"
+                  className={`segment-tab ${vectorizeSourceStage === 'quantized' ? 'active' : ''}`}
+                  onClick={() => setVectorizeSourceStage('quantized')}
+                  disabled={isProcessing}
+                  title="Force using quantized image for vectorization"
+                >
+                  Use Quantized
+                </button>
+              </div>
+            </div>
           </Section>
         )}
 

@@ -90,3 +90,27 @@ async def upload_image(file: UploadFile = File(...)):
         "mode": mode,
         "preview_url": preview_url,
     }
+
+
+@router.get("/session/{session_id}/status")
+async def session_status(session_id: str):
+    """Check if a session is still alive and return its current state for rehydration."""
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+    return {
+        "session_id": session.session_id,
+        "filename": session.original_filename,
+        "width": session.image_width,
+        "height": session.image_height,
+        "format": session.image_format,
+        "has_alpha": session.has_alpha,
+        "has_original": bool(session.original_path and session.original_path.exists()),
+        "has_preprocessed": bool(session.preprocessed_path and session.preprocessed_path.exists()),
+        "has_quantized": bool(session.quantized_path and session.quantized_path.exists()),
+        "has_vector": bool(session.svg_path and session.svg_path.exists()),
+        "original_url": f"/temp/{session.session_id}/{session.original_path.name}" if session.original_path else None,
+        "preprocessed_url": f"/temp/{session.session_id}/{session.preprocessed_path.name}" if session.preprocessed_path else None,
+        "quantized_url": f"/temp/{session.session_id}/{session.quantized_path.name}" if session.quantized_path else None,
+    }
+

@@ -8,7 +8,7 @@ import StatusBar from './components/StatusBar'
 import DropZone from './components/DropZone'
 import ExportModal from './components/ExportModal'
 import { useAppStore } from './store/appStore'
-import { uploadImage, analyzeImage } from './api/client'
+import { uploadImage, analyzeImage, getSessionStatus } from './api/client'
 
 function ProcessingOverlay() {
   const { stage } = useAppStore()
@@ -46,6 +46,16 @@ function App() {
     imageInfo, setStage, setImageInfo, setAnalysisResult, reset,
     mobileTab, setMobileTab, vectorResult, palette,
   } = useAppStore()
+
+  useEffect(() => {
+    const { sessionId, reset } = useAppStore.getState()
+    if (sessionId) {
+      getSessionStatus(sessionId).catch(() => {
+        // Session expired or backend restarted — clear stale state
+        reset()
+      })
+    }
+  }, [])
 
   // Global paste listener
   useEffect(() => {

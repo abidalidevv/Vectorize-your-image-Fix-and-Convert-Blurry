@@ -98,14 +98,21 @@ async def get_svg(session_id: str):
 
 
 def _pick_source(session, params: VectorizeParams) -> Path | None:
-    """Pick the best available source image for vectorization."""
-    # Quantized is best for color logo tracing
-    if session.quantized_path and session.quantized_path.exists():
+    """Pick source image based on explicit user choice, falling back sensibly."""
+    stage = getattr(params, "source_stage", "auto")
+    if stage == "original":
+        return session.original_path if session.original_path and session.original_path.exists() else None
+    if stage == "preprocessed":
+        if session.preprocessed_path and session.preprocessed_path.exists():
+            return session.preprocessed_path
+        return session.original_path
+    if stage == "quantized":
+        if session.quantized_path and session.quantized_path.exists():
+            return session.quantized_path
+        return session.preprocessed_path or session.original_path
+    # auto: prefer original unless the user is in logo mode AND explicitly quantized
+    if params.image_mode == "logo" and session.quantized_path and session.quantized_path.exists():
         return session.quantized_path
-    # Preprocessed next
     if session.preprocessed_path and session.preprocessed_path.exists():
         return session.preprocessed_path
-    # Original as last resort
-    if session.original_path and session.original_path.exists():
-        return session.original_path
-    return None
+    return session.original_path
