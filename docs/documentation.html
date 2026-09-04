@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VectorForge AI — Master Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg-base: #0b0c10;
+            --bg-sidebar: #12141a;
+            --bg-card: #181b24;
+            --bg-card-hover: #1e222e;
+            --bg-hover: #222634;
+            --bg-code: #0d0f14;
+            --border-subtle: #202432;
+            --border-color: #2a3042;
+            --border-accent: #3d4660;
+            --text-main: #f3f5fa;
+            --text-muted: #949db2;
+            --text-dim: #5a637a;
+            --accent-primary: #5b6ef7;
+            --accent-hover: #7182ff;
+            --accent-glow: rgba(91, 110, 247, 0.25);
+            --accent-soft: rgba(91, 110, 247, 0.12);
+            --success: #34d399;
+            --success-soft: rgba(52, 211, 153, 0.12);
+            --warning: #fbbf24;
+            --warning-soft: rgba(251, 191, 36, 0.12);
+            --error: #f87171;
+            --error-soft: rgba(248, 113, 113, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 290px;
+            flex-shrink: 0;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-subtle);
+            overflow-y: auto;
+            padding: 24px 18px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .sidebar-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #5b6ef7 0%, #8b5cf6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 0 14px var(--accent-glow);
+        }
+
+        .sidebar-brand-text {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            color: #fff;
+        }
+        .sidebar-brand-text span { color: var(--accent-primary); }
+
+        .search-box {
+            position: relative;
+        }
+        .search-input {
+            width: 100%;
+            padding: 9px 12px 9px 34px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .search-icon {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .nav-list {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .nav-item {
+            padding: 8px 12px;
+            border-radius: 7px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.18s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+            border: 1px solid transparent;
+        }
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-main);
+        }
+        .nav-item.active {
+            background: var(--accent-soft);
+            color: #fff;
+            border-color: rgba(91, 110, 247, 0.4);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding-top: 14px;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-link-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 12px;
+            border-radius: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .sidebar-link-btn:hover {
+            border-color: var(--accent-primary);
+            color: #fff;
+            background: var(--bg-hover);
+        }
+
+        /* ── Main Content Area ── */
+        .main {
+            flex: 1;
+            padding: 40px 48px;
+            overflow-y: auto;
+            max-width: 1200px;
+        }
+
+        header {
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: #fff;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        h1 span { color: var(--accent-primary); }
+
+        .lead-text {
+            font-size: 15.5px;
+            color: var(--text-muted);
+            max-width: 820px;
+            line-height: 1.6;
+        }
+
+        .badge-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-main);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: border-color 0.2s;
+        }
+        .badge:hover { border-color: var(--accent-primary); }
+        .badge.accent { background: var(--accent-soft); border-color: var(--accent-primary); color: #fff; }
+        .badge.success { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 28px;
+            transition: border-color 0.2s;
+        }
+        .card:hover {
+            border-color: var(--border-accent);
+        }
+
+        h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            color: #fff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            line-height: 1.65;
+        }
+
+        ul, ol {
+            margin: 12px 0 16px 24px;
+            color: var(--text-muted);
+        }
+        li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        li strong { color: var(--text-main); }
+
+        /* ── Tables ── */
+        .table-responsive {
+            overflow-x: auto;
+            margin: 18px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        th {
+            background: var(--bg-hover);
+            color: #fff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        /* ── Code Blocks ── */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-code);
+            border: 1px solid var(--border-subtle);
+            color: #ff90b3;
+            padding: 2px 6px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .code-block-container {
+            position: relative;
+            margin: 14px 0;
+        }
+
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px 20px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            line-height: 1.65;
+            color: #d1d5db;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .copy-btn:hover {
+            background: var(--bg-hover);
+            color: #fff;
+            border-color: var(--accent-primary);
+        }
+
+        /* ── Alerts ── */
+        .alert-box {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin: 18px 0;
+            font-size: 13.5px;
+            line-height: 1.6;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .alert-info {
+            background: rgba(96, 165, 250, 0.08);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            color: #93c5fd;
+        }
+        .alert-success {
+            background: var(--success-soft);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: #6ee7b7;
+        }
+        .alert-warning {
+            background: var(--warning-soft);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fde047;
+        }
+
+        /* ── Screenshots Gallery ── */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+            margin: 18px 0;
+        }
+        .gallery-item {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .gallery-item-caption {
+            padding: 10px 14px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ── Footer ── */
+        footer {
+            margin-top: 60px;
+            padding: 30px 0;
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-dim);
+            line-height: 1.7;
+        }
+        footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 860px) {
+            body { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border-subtle);
+                padding: 16px;
+            }
+            .main { padding: 24px 16px; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+        <a href="#overview" class="sidebar-brand">
+            <div class="sidebar-logo-icon">V</div>
+            <div class="sidebar-brand-text">Vector<span>Forge</span> AI</div>
+        </a>
+
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" placeholder="Search documentation..." oninput="filterNav(this.value)" />
+        </div>
+
+        <nav class="nav-list" id="navList">
+            <div class="nav-item active" data-target="overview">⚡ Overview & Mission</div>
+            <div class="nav-item" data-target="architecture">📐 System Architecture</div>
+            <div class="nav-item" data-target="comparison">⚖️ Comparison Matrix</div>
+            <div class="nav-item" data-target="engines">⚙️ Dual Vector Engines</div>
+            <div class="nav-item" data-target="analysis">🧠 Smart Pre-Analysis</div>
+            <div class="nav-item" data-target="preprocessing">🎛️ Preprocessing & Colors</div>
+            <div class="nav-item" data-target="canvas">🔬 Deep Zoom & Split View</div>
+            <div class="nav-item" data-target="responsive">📱 Responsive Studio</div>
+            <div class="nav-item" data-target="installation">💻 Installation & Setup</div>
+            <div class="nav-item" data-target="api">📡 REST API Reference</div>
+            <div class="nav-item" data-target="verification">🧪 Testing & Verification</div>
+            <div class="nav-item" data-target="roadmap">🗺️ Future Roadmap</div>
+            <div class="nav-item" data-target="author">👨‍💻 Author & Connect</div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="https://abidalidev.com" target="_blank" rel="noopener" class="sidebar-link-btn">
+                <span>🌐 Portfolio</span>
+                <strong>abidalidev.com</strong>
+            </a>
+            <a href="https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry" target="_blank" rel="noopener" class="sidebar-link-btn">
+                <span>📦 GitHub Repo</span>
+                <strong>abidalidevv</strong>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <main class="main">
+        <header id="overview">
+            <h1>Vector<span>Forge</span> AI — Master Documentation</h1>
+            <p class="lead-text">
+                Production-grade, 100% local-first raster-to-vector web application. Converts blurry logos, icons, illustrations, and line art into crisp, infinitely scalable Bézier curve SVG paths without cloud services or subscriptions.
+            </p>
+            <div class="badge-bar">
+                <span class="badge accent">Version 1.0.1</span>
+                <span class="badge success">100% Local-First (Windows)</span>
+                <a href="https://abidalidev.com" target="_blank" class="badge">Author: Abid Ali (abidalidev.com)</a>
+                <span class="badge">VTracer Rust Engine</span>
+                <span class="badge">FastAPI + React 19</span>
+                <span class="badge">MIT License</span>
+            </div>
+        </header>
+
+        <!-- ── Section 1: Overview ── -->
+        <section class="card">
+            <h2>⚡ Core Philosophy</h2>
+            <p>
+                Online vectorization platforms (such as Vectorizer.io) impose severe paywalls, daily credit caps, and send proprietary or sensitive user artwork to remote cloud servers.
+            </p>
+            <p>
+                <strong>VectorForge AI</strong> was architected from the ground up as a zero-telemetry, offline-first alternative for Windows. It provides professional graphic design capabilities:
+            </p>
+            <ul>
+                <li><strong>Zero API Keys or Subscriptions:</strong> Operates entirely on your local CPU/GPU hardware.</li>
+                <li><strong>Infinite Scalability:</strong> Emits pure <code>&lt;path&gt;</code> and <code>&lt;polygon&gt;</code> vectors with standard <code>viewBox</code> tags that stay razor-sharp at 2000% zoom.</li>
+                <li><strong>Smart Preprocessing:</strong> Automatically removes artifacts from blurry JPEGs, balances contrast with CLAHE, and isolates color layers via K-Means quantization.</li>
+            </ul>
+        </section>
+
+        <!-- ── Section 2: Architecture ── -->
+        <section id="architecture" class="card">
+            <h2>📐 System Architecture</h2>
+            <p>The application is decoupled into a high-performance Python FastAPI backend and a reactive React 19 frontend studio:</p>
+            <div class="code-block-container">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <div class="code-block">
+┌─────────────────────────────────────────────────────────────┐
+│                 VectorForge AI Web Studio                   │
+│          React 19 + TypeScript + Vite + Zustand             │
+│    (2000% Zoom, Pan, Split Slider, Palette & Layer Toggles) │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ HTTP REST (Port 5173 ──► 127.0.0.1:8000)
+┌──────────────────────────────▼──────────────────────────────┐
+│                    FastAPI Backend Core                     │
+├──────────────────────────────┬──────────────────────────────┤
+│     Computer Vision Suite    │     Vector Tracing Core      │
+│  • OpenCV Edge Density       │  • VTracer Rust Splines      │
+│  • CLAHE Contrast & Denoise  │  • OpenCV Contour Fallback   │
+│  • K-Means / Median-Cut      │  • Scour SVG Optimizer       │
+│  • Background Color Removal  │  • resvg-py 8× Rasterizer    │
+└──────────────────────────────┴──────────────────────────────┘
+                </div>
+            </div>
+            <h3>File Structure Map</h3>
+            <ul>
+                <li><code>backend/app/main.py</code> — FastAPI entry point, lifespan manager, and CORS rules.</li>
+                <li><code>backend/app/image_processing/</code> — Analysis, preprocessor, and quantizer pipelines.</li>
+                <li><code>backend/app/vectorization/</code> — VTracer engine, Contour engine, and dynamic selector.</li>
+                <li><code>backend/app/export/</code> — Scour SVG optimization and <code>resvg-py</code> PNG renderer.</li>
+                <li><code>frontend/src/store/appStore.ts</code> — Zustand state management with mobile tab switching.</li>
+                <li><code>frontend/src/components/</code> — TopBar, LeftPanel, PreviewCanvas, RightPanel, StatusBar.</li>
+            </ul>
+        </section>
+
+        <!-- ── Section 3: Comparison Matrix ── -->
+        <section id="comparison" class="card">
+            <h2>⚖️ Comparison: VectorForge AI vs. Cloud Converters</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Capability</th>
+                            <th>VectorForge AI ⚡</th>
+                            <th>Vectorizer.io & Cloud Tools ☁️</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Cost & Licensing</strong></td>
+                            <td><strong>100% Free & Open Source (MIT)</strong></td>
+                            <td>Monthly subscription or per-credit fee</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Data Privacy</strong></td>
+                            <td><strong>100% Local-First</strong> (0 bytes leave device)</td>
+                            <td>Images uploaded to remote servers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Offline Support</strong></td>
+                            <td>✅ Fully works offline on Windows</td>
+                            <td>❌ Requires continuous high-speed internet</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Vector Engine</strong></td>
+                            <td>✅ Rust VTracer (Smooth Bézier Splines)</td>
+                            <td>Proprietary cloud engine</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Deep Zoom Studio</strong></td>
+                            <td>✅ Up to <strong>2000%</strong> with split slider</td>
+                            <td>Fixed or limited browser zoom</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Color Palette Control</strong></td>
+                            <td>✅ K-Means & Median-Cut (2 to 64 colors)</td>
+                            <td>Automated without custom clustering</td>
+                        </tr>
+                        <tr>
+                            <td><strong>High-Res PNG Upscaling</strong></td>
+                            <td>✅ 1×, 2×, 4×, 8× via Rust <code>resvg</code></td>
+                            <td>Often 1× only or extra charge</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ── Section 4: Dual Vector Engines ── -->
+        <section id="engines" class="card">
+            <h2>⚙️ Dual Vector Engines</h2>
+            <p>To balance speed with aesthetic curve fitting, VectorForge AI employs two complementary vectorization engines:</p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Engine</th>
+                            <th>Underlying Technology</th>
+                            <th>Ideal Target Artwork</th>
+                            <th>Key Strengths</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>VTracer Engine</strong></td>
+                            <td>Rust compiled library with Python PyO3 bindings</td>
+                            <td>Multi-color logos, illustrations, stickers, photos</td>
+                            <td>High-order Bézier curves, no staircasing, stacked/cutout hierarchy</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contour Engine</strong></td>
+                            <td>OpenCV <code>findContours</code> + <code>approxPolyDP</code></td>
+                            <td>Black & white line drawings, stamps, technical blueprints</td>
+                            <td>Ultra-fast processing (&lt;100ms), pure polygon simplification</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert-box alert-warning">
+                <div>⚠️</div>
+                <div>
+                    <strong>Critical Engine Rule:</strong> On Windows with Python 3.14, <code>vtracer.convert_image_to_svg_py</code> MUST be called with positional arguments in exact sequence to avoid PyO3 tuple parsing panics.
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 5: Pre-Analysis ── -->
+        <section id="analysis" class="card">
+            <h2>🧠 Intelligent Image Pre-Analysis</h2>
+            <p>
+                When an image is uploaded, <code>app/image_processing/analyzer.py</code> computes its edge complexity, color variance, and alpha transparency to recommend the optimal tracing mode:
+            </p>
+            <ul>
+                <li><code>LOGO</code> — Clean, flat color regions with high edge continuity. Defaults to spline smoothing.</li>
+                <li><code>ILLUSTRATION</code> — Layered multi-tone graphic. Balances color precision with noise filtering.</li>
+                <li><code>SKETCH</code> — High-frequency line contours. Triggers adaptive contrast thresholding.</li>
+                <li><code>BW</code> — Binary black and white artwork. Routed directly to Contour engine for maximum sharpness.</li>
+                <li><code>PHOTO</code> — Continuous gradients. Uses K-Means quantization to group tones before tracing.</li>
+            </ul>
+        </section>
+
+        <!-- ── Section 6: Preprocessing & Quantization ── -->
+        <section id="preprocessing" class="card">
+            <h2>🎛️ Preprocessing & Color Quantization Suite</h2>
+            <p>Transform noisy, blurry low-resolution rasters into clean inputs ready for vectorization:</p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th>Parameter Range</th>
+                            <th>Functionality</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Noise Reduction</strong></td>
+                            <td>Strength: 1.0 – 20.0</td>
+                            <td>Bilateral filter removes JPEG compression noise while preserving hard edges</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contrast (CLAHE)</strong></td>
+                            <td>Value: 0.1 – 3.0</td>
+                            <td>Adaptive histogram equalization clarifies faint artwork details</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sharpening</strong></td>
+                            <td>Strength: 0.0 – 2.0</td>
+                            <td>Unsharp masking enhances blurry boundary pixels</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Background Removal</strong></td>
+                            <td>Tolerance: 0 – 100</td>
+                            <td>Flood-fills corner color with tolerance to isolate subject on transparent canvas</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Color Quantization</strong></td>
+                            <td>Colors: 2 – 64</td>
+                            <td>K-Means clusters pixel colors and generates palette with area coverage percentages</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ── Section 7: Canvas ── -->
+        <section id="canvas" class="card">
+            <h2>🔬 Deep Zoom Studio & Split View Comparison</h2>
+            <p>
+                The center canvas allows inspection at extreme zoom levels to verify that vector paths maintain razor-sharp clarity without rasterization artifacts.
+            </p>
+            <ul>
+                <li><strong>2000% Deep Zoom:</strong> Smooth mouse wheel scaling from 5% to 2000% with centered focal zoom.</li>
+                <li><strong>Infinite Pan:</strong> Click-drag canvas panning with trackpad gesture support.</li>
+                <li><strong>Interactive Split Slider:</strong> Real-time split bar comparing original raster on the left with vectorized SVG on the right.</li>
+                <li><strong>Layer Visibility Toggles:</strong> Show or hide individual color layers in the right-side panel to isolate paths.</li>
+            </ul>
+            <div class="gallery-grid">
+                <div class="gallery-item">
+                    <img src="screenshots/desktop-studio.png" alt="Desktop Studio" />
+                    <div class="gallery-item-caption">Desktop Studio with 2000% Zoom & downward tooltip</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="screenshots/vector-complete.png" alt="Vector Result" />
+                    <div class="gallery-item-caption">Live Vectorization Result with 3 pure vector paths</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 8: Responsive Design ── -->
+        <section id="responsive" class="card">
+            <h2>📱 Responsive Mobile & Tablet Studio</h2>
+            <p>
+                In version <code>1.0.1</code>, VectorForge AI received a complete responsive overhaul ensuring zero horizontal overflow or squished previews on small screens:
+            </p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Viewport Breakpoint</th>
+                            <th>Device Tier</th>
+                            <th>Layout Behavior</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>&gt; 1080px</code></td>
+                            <td>Desktop / Wide Monitors</td>
+                            <td>Full 3-column studio layout (280px left / flex:1 canvas / 260px right)</td>
+                        </tr>
+                        <tr>
+                            <td><code>821px – 1080px</code></td>
+                            <td>Laptops / Tablets Landscape</td>
+                            <td>Compressed sidebars (245px / 225px) granting 350px–610px to canvas</td>
+                        </tr>
+                        <tr>
+                            <td><code>&lt;= 820px</code></td>
+                            <td>Tablets & Large Phones</td>
+                            <td>Segmented tabs (<code>🎛 Controls</code>, <code>👁 Canvas</code>, <code>🎨 Layers</code>) with 100% width active view</td>
+                        </tr>
+                        <tr>
+                            <td><code>&lt;= 640px</code></td>
+                            <td>Phones Portrait</td>
+                            <td>Compact TopBar (48px), hides PNG scale multipliers, clean status bar</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert-box alert-success">
+                <div>✓</div>
+                <div>
+                    <strong>Downward Tooltips:</strong> Tooltips in the TopBar always open downwards (<code>top: calc(100% + 8px); bottom: auto;</code>) so they are never clipped or hidden above the browser window.
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 9: Installation ── -->
+        <section id="installation" class="card">
+            <h2>💻 Installation & Setup Guide</h2>
+            <h3>1. Clone Repository</h3>
+            <div class="code-block-container">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <div class="code-block">git clone https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry.git
+cd Vectorize-your-image-Fix-and-Convert-Blurry</div>
+            </div>
+
+            <h3>2. Set Up Python Backend (Port 8000)</h3>
+            <div class="code-block-container">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <div class="code-block">cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Start FastAPI server
+cd app
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload</div>
+            </div>
+
+            <h3>3. Set Up React Frontend Studio (Port 5173)</h3>
+            <div class="code-block-container">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <div class="code-block">cd frontend
+npm install
+
+# Start Vite dev server
+npm run dev</div>
+            </div>
+        </section>
+
+        <!-- ── Section 10: API Reference ── -->
+        <section id="api" class="card">
+            <h2>📡 REST API Reference</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Endpoint</th>
+                            <th>Payload / Query</th>
+                            <th>Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/health</code></td>
+                            <td>None</td>
+                            <td><code>{"status":"ok","version":"1.0.0"}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/upload</code></td>
+                            <td>Multipart <code>file</code></td>
+                            <td><code>ImageInfo</code> (session_id, dimensions, preview_url)</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/analyze</code></td>
+                            <td><code>{"session_id": "..."}</code></td>
+                            <td><code>AnalysisResult</code> (mode, confidence, notes)</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/preprocess</code></td>
+                            <td><code>PreprocessRequest</code></td>
+                            <td><code>PreprocessResponse</code> (preview_url)</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/quantize</code></td>
+                            <td><code>QuantizeRequest</code> (num_colors)</td>
+                            <td><code>QuantizeResponse</code> (palette, preview_url)</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/vectorize</code></td>
+                            <td><code>VectorizeRequest</code> (preset, mode)</td>
+                            <td><code>VectorizeResult</code> (svg_url, stats, layers)</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/export/svg</code></td>
+                            <td><code>{"session_id":"...", "optimize":true}</code></td>
+                            <td>SVG binary blob (<code>image/svg+xml</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/export/png</code></td>
+                            <td><code>{"session_id":"...", "scale":2}</code></td>
+                            <td>PNG binary blob (<code>image/png</code>)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ── Section 11: Verification ── -->
+        <section id="verification" class="card">
+            <h2>🧪 Testing & Quality Assurance</h2>
+            <p>VectorForge AI includes automated test suites covering all computer-vision filters, vector algorithms, and API routes:</p>
+            <div class="code-block-container">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <div class="code-block"># 1. Run 9 Pytest Unit Tests
+python -m pytest backend/tests/test_vectorforge.py -v
+
+# 2. Run End-to-End HTTP API Integration Test
+python tests/test_api_e2e.py
+
+# 3. Compile Production Frontend Bundle
+cd frontend
+npm run build</div>
+            </div>
+            <div class="alert-box alert-success">
+                <div>✓</div>
+                <div>
+                    <strong>Zero Build Errors:</strong> The frontend compiles via TypeScript and Vite in &lt;400ms. All 9 Pytest tests consistently pass in under 2 seconds.
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 12: Roadmap ── -->
+        <section id="roadmap" class="card">
+            <h2>🗺️ Future Roadmap & Upcoming Enhancements</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Batch Processing Mode</strong></td>
+                            <td>Planned</td>
+                            <td>Queue 20+ images simultaneously for background conversion with bulk ZIP export</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Standalone Windows Desktop .EXE</strong></td>
+                            <td>Planned</td>
+                            <td>Single-click installer packaged via Tauri (Rust) without requiring Python or Node</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Direct EPS & PDF Vector Export</strong></td>
+                            <td>Planned</td>
+                            <td>Export vector paths directly to Adobe Illustrator (.eps) and print-ready PDF</td>
+                        </tr>
+                        <tr>
+                            <td><strong>AI Deep-Learning Line Repair</strong></td>
+                            <td>Research</td>
+                            <td>Lightweight ONNX model to automatically reconnect fragmented sketch lines</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Client-Side WebAssembly (WASM)</strong></td>
+                            <td>Research</td>
+                            <td>Compile VTracer to WASM for completely serverless execution inside static web pages</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ── Section 13: Author ── -->
+        <section id="author" class="card">
+            <h2>👨‍💻 Author & Developer Credits</h2>
+            <p>
+                <strong>VectorForge AI</strong> was developed and architected by <strong>Abid Ali</strong> as a high-performance open-source utility.
+            </p>
+            <ul>
+                <li>🌐 <strong>Personal Portfolio:</strong> <a href="https://abidalidev.com" target="_blank" rel="noopener" style="color:var(--accent-primary); font-weight:600;">abidalidev.com</a></li>
+                <li>🐙 <strong>GitHub Profile:</strong> <a href="https://github.com/abidalidevv" target="_blank" rel="noopener" style="color:var(--accent-primary); font-weight:600;">@abidalidevv</a></li>
+                <li>📦 <strong>Repository:</strong> <a href="https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry" target="_blank" rel="noopener" style="color:var(--accent-primary); font-weight:600;">Vectorize-your-image-Fix-and-Convert-Blurry</a></li>
+            </ul>
+        </section>
+
+        <footer>
+            VectorForge AI v1.0.1 • Crafted by <a href="https://abidalidev.com" target="_blank">Abid Ali</a> • Licensed under MIT • Local-First & Open-Source
+        </footer>
+    </main>
+
+    <!-- ── Interactive Scripts ── -->
+    <script>
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const active = document.querySelector('.nav-item.active');
+                if (active) active.classList.remove('active');
+                item.classList.add('active');
+                const targetId = item.dataset.target;
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        function filterNav(q) {
+            const term = q.toLowerCase();
+            navItems.forEach(item => {
+                const match = item.textContent.toLowerCase().includes(term);
+                item.style.display = match ? 'flex' : 'none';
+            });
+        }
+
+        function copyCode(btn) {
+            const container = btn.closest('.code-block-container');
+            const code = container.querySelector('.code-block').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied! ✓';
+                btn.style.color = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
