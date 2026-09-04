@@ -1,7 +1,8 @@
 """
-VectorForge AI — Fine Line & Line Art Detector / Enhancer
-Detects thin lines (1-2px) in line drawings, radar/target rings, wireframes, and sketches,
-and enhances them so vectorizers (VTracer / Contour) do not drop them as zero-area speckles.
+VectorForge AI / Vectorizer AI — Fine Line & Line Art Detector / Enhancer
+Detects thin lines (1-2px) in line drawings, radar/target rings, wireframes, and sketches.
+Uses 2x supersampling to preserve thin contours and concentric circles without creating
+trumpet-shaped flaring or corner-webbing at line junctions and intersections.
 """
 import logging
 from pathlib import Path
@@ -19,12 +20,11 @@ def detect_line_art(img: np.ndarray) -> Dict[str, Any]:
     """
     h, w = img.shape[:2]
 
-    # Convert to RGB if needed
+    # Convert to RGB / Grayscale
     if len(img.shape) == 2:
         gray = img
         is_monochrome = True
     elif img.shape[2] == 4:
-        # Handle alpha
         rgb = img[:, :, :3]
         diff_rg = cv2.absdiff(rgb[:, :, 0], rgb[:, :, 1])
         diff_rb = cv2.absdiff(rgb[:, :, 0], rgb[:, :, 2])
@@ -51,8 +51,7 @@ def detect_line_art(img: np.ndarray) -> Dict[str, Any]:
     total_pixels = h * w
     fg_ratio = fg_pixels / max(1, total_pixels)
 
-    # Line art typically has low foreground area (< 35% of total canvas)
-    # Check erosion with 3x3 cross kernel
+    # Line art check via 3x3 erosion
     kernel_cross = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
     eroded = cv2.erode(bin_inv, kernel_cross, iterations=1)
     eroded_pixels = int(np.count_nonzero(eroded))
@@ -77,53 +76,34 @@ def detect_line_art(img: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def enhance_fine_lines(image_path: Path, output_path: Path) -> Tuple[Path, bool]:
+def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 2) -> Tuple[Path, bool, int]:
     """
-    If image contains fine line art, enhance thin lines slightly (sub-pixel/1px cross dilation)
-    so vectorizers can trace them with 100% fidelity without treating them as 0-area noise.
-    Returns (enhanced_path, was_enhanced).
+    If image contains fine line art (1-2px thin lines), supersample the image by 2x
+    using bicubic interpolation. This turns 1px lines into smooth 2px anti-aliased manifolds
+    without filling in junction wedges or creating flared/trumpet bulging at line intersections.
+    Returns (enhanced_path, was_enhanced, scale_factor).
     """
     try:
         img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
         if img is None:
-            return image_path, False
+            return image_path, False, 1
 
         analysis = detect_line_art(img)
         if not analysis["has_fine_lines"]:
-            return image_path, False
+            return image_path, False, 1
 
         logger.info(
-            f"Preserving fine lines for {image_path.name} "
+            f"Preserving fine lines for {image_path.name} via {scale}x supersampling "
             f"(thin_line_ratio={analysis['thin_line_ratio']})"
         )
 
-        has_alpha = len(img.shape) == 3 and img.shape[2] == 4
-        if has_alpha:
-            rgb = img[:, :, :3]
-            alpha = img[:, :, 3]
-            gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
-            # Combine dark pixels and non-transparent pixels
-            _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-            bin_inv = cv2.bitwise_and(bin_inv, alpha)
-        else:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-            _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+        h, w = img.shape[:2]
+        # Supersample with bicubic interpolation
+        upscaled = cv2.resize(img, (w * scale, h * scale), interpolation=cv2.INTER_CUBIC)
 
-        # Cross kernel dilates by 1px orthogonally to reinforce 1px strokes without rounding sharp corners
-        kernel_cross = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        dilated_inv = cv2.dilate(bin_inv, kernel_cross, iterations=1)
-
-        # Invert back to black lines on white canvas
-        dilated = cv2.bitwise_not(dilated_inv)
-
-        if has_alpha:
-            out_img = cv2.merge([dilated, dilated, dilated, alpha])
-        else:
-            out_img = cv2.merge([dilated, dilated, dilated])
-
-        cv2.imwrite(str(output_path), out_img)
-        return output_path, True
+        cv2.imwrite(str(output_path), upscaled)
+        return output_path, True, scale
 
     except Exception as e:
-        logger.warning(f"Fine line enhancement failed (using original): {e}")
-        return image_path, False
+        logger.warning(f"Fine line supersampling failed (using original): {e}")
+        return image_path, False, 1

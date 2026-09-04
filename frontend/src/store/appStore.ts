@@ -73,6 +73,7 @@ export interface AppState {
   splitPosition: number
   showSplitView: boolean
   mobileTab: MobileTab
+  showExportModal: boolean
 
   // Actions
   setStage: (stage: ProcessingStage, error?: string) => void
@@ -86,10 +87,11 @@ export interface AppState {
   updateVectorizeSettings: (s: Partial<VectorizeSettings>) => void
   setNumColors: (n: number) => void
   setViewMode: (mode: ViewMode) => void
-  setZoom: (zoom: number) => void
+  setZoom: (zoom: number | ((prev: number) => number)) => void
   setSplitPosition: (pos: number) => void
   setShowSplitView: (show: boolean) => void
   setMobileTab: (tab: MobileTab) => void
+  setShowExportModal: (show: boolean) => void
   toggleLayerVisibility: (index: number) => void
   reset: () => void
 }
@@ -111,15 +113,15 @@ const DEFAULT_PREPROCESS: PreprocessSettings = {
 
 const DEFAULT_VECTORIZE: VectorizeSettings = {
   imageMode: 'auto',
-  qualityPreset: 'balanced',
-  colorPrecision: 6,
-  layerDifference: 16,
+  qualityPreset: 'high',
+  colorPrecision: 7,
+  layerDifference: 12,
   cornerThreshold: 60,
-  lengthThreshold: 4.0,
-  filterSpeckle: 4,
+  lengthThreshold: 2.0,
+  filterSpeckle: 0,
   curveFitting: 'spline',
-  minArea: 4.0,
-  simplifyTolerance: 0.5,
+  minArea: 1.0,
+  simplifyTolerance: 0.1,
   groupByColor: true,
 }
 
@@ -142,6 +144,7 @@ export const useAppStore = create<AppState>((set) => ({
   splitPosition: 50,
   showSplitView: false,
   mobileTab: 'canvas',
+  showExportModal: false,
 
   setStage: (stage, error) =>
     set({ stage, errorMessage: error ?? null }),
@@ -182,10 +185,14 @@ export const useAppStore = create<AppState>((set) => ({
 
   setNumColors: (n) => set({ numColors: n }),
   setViewMode: (mode) => set({ viewMode: mode }),
-  setZoom: (zoom) => set({ zoom }),
+  setZoom: (zoom) =>
+    set((state) => ({
+      zoom: typeof zoom === 'function' ? zoom(state.zoom) : zoom,
+    })),
   setSplitPosition: (pos) => set({ splitPosition: pos }),
   setShowSplitView: (show) => set({ showSplitView: show }),
   setMobileTab: (tab) => set({ mobileTab: tab }),
+  setShowExportModal: (show) => set({ showExportModal: show }),
 
   toggleLayerVisibility: (index) =>
     set((state) => ({

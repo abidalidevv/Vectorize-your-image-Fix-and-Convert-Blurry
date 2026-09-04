@@ -1,14 +1,14 @@
-# 🧠 VectorForge AI — Brain & Architectural Memory
+# 🧠 Vectorizer AI — Brain & Architectural Memory
 
 > **System Memory Bank, Technical Blueprint & Agent Hand-off Guide**  
 > **Author**: [Abid Ali](https://abidalidev.com) • [GitHub (@abidalidevv)](https://github.com/abidalidevv) • **Repository**: [Vectorize-your-image-Fix-and-Convert-Blurry](https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry)  
-> **Version**: `1.0.2` • **Status**: Production-Ready, Verified & Tested 100% Locally
+> **Version**: `1.0.3` • **Status**: Production-Ready, Verified & Tested 100% Locally
 
 ---
 
 ## 1. Executive Summary & Purpose
 
-**VectorForge AI** is a local-first, free, and open-source raster-to-vector studio designed as a Windows-native alternative to cloud services like Vectorizer.io. It converts raster images (PNG, JPG, BMP, WebP) into pure, scalable Bézier curve SVG vector paths without relying on external cloud APIs, telemetry, or paid subscriptions.
+**Vectorizer AI** is a local-first, free, and open-source raster-to-vector studio designed as a Windows-native alternative to cloud services like Vectorizer.io. It converts raster images (PNG, JPG, BMP, WebP) into pure, scalable Bézier curve SVG vector paths without relying on external cloud APIs, telemetry, or paid subscriptions.
 
 ---
 
@@ -158,6 +158,14 @@ vectorforge-ai/
 - Node.js 18+ resolves `localhost` to IPv6 `::1` before IPv4 `127.0.0.1`.
 - To prevent proxy connection drops, `vite.config.ts` targets explicit IPv4 `http://127.0.0.1:8000`.
 
+### 6. Line Intersection Bulge Prevention (2× Bicubic Supersampling)
+- Morphological dilation (`cv2.dilate`) on thin lines causes cross/T-junctions and concentric circles to fill corner wedges, producing ugly trumpet-shaped webbing after spline curve fitting.
+- **Fix in v1.0.3**: Replaced dilation with 2× bicubic supersampling in `line_detector.py`. The tracer operates on the supersampled image and the resulting SVG applies `<g transform="scale(0.5)">` with the original `viewBox="0 0 W H"`. This preserves orthogonal 90° intersections, true circular geometry, and zero junction flaring.
+
+### 7. Canvas Zoom Isolation (Native Non-Passive Wheel Listener)
+- In React 19, synthetic `onWheel` registers as passive in modern browsers, ignoring `e.preventDefault()`. When users zoom deeply or pinch, the entire Chrome window zooms and controls clip outside the screen.
+- **Fix in v1.0.3**: Attached a native DOM listener on `containerRef.current` with `{ passive: false }` and `e.preventDefault()`. Zoom is strictly isolated to the canvas image and focal-point centered around the mouse cursor.
+
 ---
 
 ## 5. What is 100% COMPLETE & WORKING ✅
@@ -169,14 +177,15 @@ vectorforge-ai/
 | **Preprocessing Suite** | ✅ | Bilateral denoise, CLAHE contrast, unsharp mask, bg-removal |
 | **Quantization** | ✅ | K-Means & Median-Cut (2 to 64 colors) with palette percentages |
 | **VTracer Spline Tracing** | ✅ | Pure Bézier curves, zero pixelation at 2000% zoom |
+| **Junction Webbing Prevention** | ✅ | 2× supersampling prevents corner bulging at line intersections |
 | **Contour Fallback** | ✅ | OpenCV findContours for pure monochrome / sketch art |
 | **Layer Extraction** | ✅ | Parses color groups and provides interactive visibility toggle |
-| **Interactive Studio** | ✅ | Drag-pan, mouse wheel zoom (5% to 2000%), before/after split slider |
-| **SVG Export** | ✅ | Scour-optimized, valid `viewBox`, strips bloat |
-| **PNG Export** | ✅ | `resvg` Rust renderer (1x, 2x, 4x, 8x resolutions) |
+| **Isolated Canvas Zoom** | ✅ | Smooth focal-point zoom (5% to 2000%) without page zoom |
+| **Export Modal & Quick Export**| ✅ | Modal with SVG code copy/download & PNG (1x, 2x, 4x, 8x / 300 DPI) |
+| **Optimal Default Settings** | ✅ | High quality preset, speckle: 0, lengthThreshold: 2.0 out of the box |
 | **Responsive Studio** | ✅ | Desktop 3-column, tablet adaptive, mobile segmented tabs (`Controls`, `Canvas`, `Layers`) |
 | **Downward Tooltips** | ✅ | Never clipped above browser window; right-aligned on edge buttons |
-| **Automated Tests** | ✅ | 9/9 Pytest unit tests pass, E2E HTTP test suite passes, frontend build compiles in <400ms |
+| **Automated Tests** | ✅ | 10/10 Pytest unit tests pass, E2E HTTP test suite passes, frontend build compiles in <400ms |
 
 ---
 

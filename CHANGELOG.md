@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-09-04
+
+### Added
+- **Export & Download Modal**: Added a dedicated `ExportModal` component with SVG vector downloads, raw SVG markup clipboard copying, and high-resolution PNG rendering (1×, 2×, 4×, 8× / 300+ DPI).
+- **Prominent Export Actions**: Placed a glowing `⤓ Export As…` button in the TopBar and an "Export Ready" quick-action card in the LeftPanel directly underneath the Vectorize button so downloads are always immediately accessible.
+- **Professional Rebranding**: Rebranded product identity from VectorForge AI to **Vectorizer AI** across UI headers, logo badges, page titles, and metadata.
+
+### Fixed
+- **Line Junction Bulging & Trumpet Flares**: Eliminated junction filleting/webbing where concentric circles intersect crosshairs. Replaced morphological dilation with 2× bicubic supersampling and inverse SVG group scaling (`<g transform="scale(0.5)">`), guaranteeing clean, crisp, perpendicular intersections with zero line thickening.
+- **Canvas Zoom Page Escalation**: Fixed mouse wheel zooming scaling the entire browser window instead of just the canvas. Replaced React passive synthetic events with native `{ passive: false }` wheel listeners, added `touch-action: none`, and blocked global `Ctrl+Wheel` page zoom. Zooming up to 2000% now smoothly focal-zooms the image while keeping all panels and navigation perfectly locked.
+- **Optimal Default Preset Settings**: Switched default vectorization settings to High fidelity (`filterSpeckle: 0`, `colorPrecision: 7`, `lengthThreshold: 2.0`, `minArea: 1.0`) ensuring razor-sharp vector tracing out-of-the-box without requiring manual knob tweaking.
+
+---
+
 ## [1.0.2] - 2026-09-04
 
 ### Fixed

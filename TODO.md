@@ -1,6 +1,6 @@
-# VectorForge AI Roadmap & TODO
+# Vectorizer AI Roadmap & TODO
 
-Future enhancements and planned features for subsequent versions of VectorForge AI.
+Future enhancements and planned features for subsequent versions of Vectorizer AI.
 
 ---
 

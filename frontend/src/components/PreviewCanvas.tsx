@@ -24,6 +24,49 @@ export default function PreviewCanvas() {
     setZoom(1)
   }, [imageInfo?.session_id])
 
+  // Non-passive wheel event listener to prevent browser page zoom (Ctrl+Wheel and trackpad pinch)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const handleCanvasWheel = (e: WheelEvent) => {
+      // Always prevent default page scroll / page zoom
+      e.preventDefault()
+      e.stopPropagation()
+
+      const rect = el.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left - rect.width / 2
+      const mouseY = e.clientY - rect.top - rect.height / 2
+
+      const factor = e.deltaY < 0 ? 1.18 : 0.85
+
+      setZoom((prevZoom: number) => {
+        const nextZoom = Math.min(20, Math.max(0.05, prevZoom * factor))
+        // Smooth focal-point zooming (centered on cursor)
+        setPan(prevPan => ({
+          x: mouseX - (mouseX - prevPan.x) * (nextZoom / prevZoom),
+          y: mouseY - (mouseY - prevPan.y) * (nextZoom / prevZoom),
+        }))
+        return nextZoom
+      })
+    }
+
+    // Global listener to prevent whole-page zoom if user holds Ctrl while scrolling over the app
+    const handleGlobalWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault()
+      }
+    }
+
+    el.addEventListener('wheel', handleCanvasWheel, { passive: false })
+    window.addEventListener('wheel', handleGlobalWheel, { passive: false })
+
+    return () => {
+      el.removeEventListener('wheel', handleCanvasWheel)
+      window.removeEventListener('wheel', handleGlobalWheel)
+    }
+  }, [setZoom])
+
   // Determine which URL to show for current view
   const currentUrl = (() => {
     if (viewMode === 'vector' && vectorResult) return vectorResult.svg_url
@@ -35,13 +78,6 @@ export default function PreviewCanvas() {
   })()
 
   const isVector = viewMode === 'vector' && !!vectorResult
-
-  // Mouse wheel zoom
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault()
-    const factor = e.deltaY < 0 ? 1.15 : 0.87
-    setZoom(Math.min(20, Math.max(0.05, zoom * factor)))
-  }, [zoom, setZoom])
 
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -70,8 +106,8 @@ export default function PreviewCanvas() {
     setDraggingSplit(false)
   }
 
-  const zoomIn  = () => setZoom(Math.min(20, zoom * 1.4))
-  const zoomOut = () => setZoom(Math.max(0.05, zoom / 1.4))
+  const zoomIn  = () => setZoom((z: number) => Math.min(20, z * 1.4))
+  const zoomOut = () => setZoom((z: number) => Math.max(0.05, z / 1.4))
   const zoomFit = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
   const zoomTo  = (z: number) => setZoom(z)
 
@@ -95,12 +131,17 @@ export default function PreviewCanvas() {
     <div
       className="preview-area checkerboard"
       ref={containerRef}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}
+      style={{
+        position: 'relative',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+        touchAction: 'none',
+      }}
     >
       {/* View Mode Tabs */}
       <div className="preview-toolbar">
@@ -259,4 +300,3 @@ export default function PreviewCanvas() {
     </div>
   )
 }
-

@@ -6,6 +6,7 @@ import RightPanel from './components/RightPanel'
 import PreviewCanvas from './components/PreviewCanvas'
 import StatusBar from './components/StatusBar'
 import DropZone from './components/DropZone'
+import ExportModal from './components/ExportModal'
 import { useAppStore } from './store/appStore'
 import { uploadImage, analyzeImage } from './api/client'
 
@@ -134,6 +135,7 @@ function App() {
         </div>
       </div>
       <StatusBar />
+      <ExportModal />
     </div>
   )
 }

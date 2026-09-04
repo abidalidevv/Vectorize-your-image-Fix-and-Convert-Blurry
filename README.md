@@ -1,4 +1,4 @@
-# ⚡ VectorForge AI
+# ⚡ Vectorizer AI
 
 <div align="center">
 
@@ -43,13 +43,13 @@
 
 ---
 
-## 💡 Why VectorForge AI?
+## 💡 Why Vectorizer AI?
 
 Online services like **Vectorizer.io** or subscription-based cloud converters lock vectorization behind paywalls, impose restrictive daily quotas, or transmit sensitive branding and artwork to remote cloud servers.
 
-**VectorForge AI** provides an open-source, local-first alternative that runs entirely on your own hardware without external API keys or cloud dependencies.
+**Vectorizer AI** provides an open-source, local-first alternative that runs entirely on your own hardware without external API keys or cloud dependencies.
 
-| Feature | VectorForge AI ⚡ | Vectorizer.io / Cloud Converters ☁️ |
+| Feature | Vectorizer AI ⚡ | Vectorizer.io / Cloud Converters ☁️ |
 |---|:---:|:---:|
 | **Cost & License** | **100% Free & Open Source** (MIT) | Paid Subscription / Pay-per-credit |
 | **Privacy & Security** | **100% Local-First** (Zero data leaves device) | Images sent to remote 3rd-party servers |
@@ -212,10 +212,10 @@ npm run dev
 
 ## 🧪 Testing & Verification
 
-VectorForge AI includes automated test suites covering all computer-vision pipelines, vectorization engines, and HTTP routes.
+Vectorizer AI includes automated test suites covering all computer-vision pipelines, vectorization engines, and HTTP routes.
 
 ```powershell
-# Run backend pytest suite (9 tests)
+# Run backend pytest suite (10 tests)
 python -m pytest backend/tests/test_vectorforge.py -v
 
 # Run full end-to-end HTTP pipeline test

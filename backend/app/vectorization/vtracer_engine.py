@@ -1,12 +1,13 @@
 """
-VectorForge AI — VTracer Engine
+VectorForge AI / Vectorizer AI — VTracer Engine
 Primary color and line-art vectorization using the vtracer library (Rust-based).
-Features fine line detail preservation and cutout hierarchy.
+Features fine-line supersampling preservation (anti-bulging/anti-flaring) and cutout hierarchy.
 """
 import logging
 from pathlib import Path
+import re
 from typing import Any
-
+import cv2
 import vtracer
 
 from vectorization.base import AbstractTracer
@@ -21,7 +22,7 @@ QUALITY_PRESETS = {
         "colormode": "color",
         "hierarchical": "cutout",
         "mode": "polygon",
-        "filter_speckle": 4,
+        "filter_speckle": 2,
         "color_precision": 4,
         "layer_difference": 24,
         "corner_threshold": 60,
@@ -34,11 +35,11 @@ QUALITY_PRESETS = {
         "colormode": "color",
         "hierarchical": "cutout",
         "mode": "spline",
-        "filter_speckle": 2,
-        "color_precision": 6,
-        "layer_difference": 16,
+        "filter_speckle": 0,
+        "color_precision": 7,
+        "layer_difference": 12,
         "corner_threshold": 60,
-        "length_threshold": 3.0,
+        "length_threshold": 2.5,
         "max_iterations": 10,
         "splice_threshold": 45,
         "path_precision": 5,
@@ -47,7 +48,7 @@ QUALITY_PRESETS = {
         "colormode": "color",
         "hierarchical": "cutout",
         "mode": "spline",
-        "filter_speckle": 1,
+        "filter_speckle": 0,
         "color_precision": 8,
         "layer_difference": 8,
         "corner_threshold": 60,
@@ -73,7 +74,7 @@ QUALITY_PRESETS = {
 
 
 class VTracerEngine(AbstractTracer):
-    """VTracer-based color vectorization engine with fine-line preservation."""
+    """VTracer-based color vectorization engine with junction-preserving supersampling."""
 
     @property
     def name(self) -> str:
@@ -100,20 +101,25 @@ class VTracerEngine(AbstractTracer):
             splice_threshold = int(params.get("splice_threshold", preset["splice_threshold"]))
             path_precision = int(preset.get("path_precision", 5))
 
-            # Fine line detail preservation
+            # Fine line detail preservation via supersampling (no corner dilation)
             trace_image_path = image_path
             temp_enhanced_path = None
             preserve_fine_lines = params.get("preserve_fine_lines", True)
+            scale_factor = 1
+            w_orig, h_orig = 0, 0
 
             if preserve_fine_lines:
                 temp_enhanced_path = image_path.parent / f"{image_path.stem}_fine_enhanced.png"
-                enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path)
+                enhanced_path, was_enhanced, scale_factor = enhance_fine_lines(image_path, temp_enhanced_path, scale=2)
                 if was_enhanced:
+                    orig_img = cv2.imread(str(image_path))
+                    if orig_img is not None:
+                        h_orig, w_orig = orig_img.shape[:2]
                     trace_image_path = enhanced_path
                     hierarchical = "cutout"
                     filter_speckle = min(filter_speckle, 1)
                     length_threshold = min(length_threshold, 2.0)
-                    logger.info(f"VTracer fine line mode active for {image_path.name}")
+                    logger.info(f"VTracer supersampling active ({scale_factor}x) for {image_path.name}")
 
             logger.info(f"VTracer tracing {trace_image_path} -> {output_svg_path}")
 
@@ -133,12 +139,16 @@ class VTracerEngine(AbstractTracer):
                 path_precision,
             )
 
-            # Cleanup temp enhanced image if created
+            # Cleanup temp supersampled image
             if temp_enhanced_path and temp_enhanced_path.exists():
                 try:
                     temp_enhanced_path.unlink()
                 except Exception:
                     pass
+
+            # If supersampled, restore SVG coordinates to original image viewport
+            if scale_factor > 1 and w_orig > 0 and h_orig > 0:
+                _rescale_svg(output_svg_path, w_orig, h_orig, scale_factor)
 
             svg_size = output_svg_path.stat().st_size if output_svg_path.exists() else 0
             logger.info(f"VTracer wrote SVG: {output_svg_path} ({svg_size} bytes)")
@@ -161,8 +171,8 @@ class VTracerEngine(AbstractTracer):
 
     def trace_bw(self, image_path: Path, output_svg_path: Path, params: dict) -> dict:
         """
-        Trace as B&W/line art using fine-line preservation and cutout hierarchy.
-        Avoids VTracer binary mode polygon inversion bug by using 2-level color cutout.
+        Trace as B&W/line art using 2x supersampling and cutout hierarchy.
+        Avoids corner webbing / trumpet-flaring at line junctions.
         """
         try:
             preset_name = params.get("quality_preset", "balanced")
@@ -172,11 +182,15 @@ class VTracerEngine(AbstractTracer):
             hierarchical = "cutout"
             mode = self._get_mode(params)
 
-            # Fine line detail preservation
+            # Fine line detail preservation via supersampling
             trace_image_path = image_path
             temp_enhanced_path = image_path.parent / f"{image_path.stem}_fine_enhanced_bw.png"
-            enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path)
+            enhanced_path, was_enhanced, scale_factor = enhance_fine_lines(image_path, temp_enhanced_path, scale=2)
+            w_orig, h_orig = 0, 0
             if was_enhanced:
+                orig_img = cv2.imread(str(image_path))
+                if orig_img is not None:
+                    h_orig, w_orig = orig_img.shape[:2]
                 trace_image_path = enhanced_path
                 filter_speckle = 0
                 length_threshold = min(float(params.get("length_threshold", 2.0)), 2.0)
@@ -184,7 +198,7 @@ class VTracerEngine(AbstractTracer):
                 filter_speckle = int(params.get("filter_speckle", 0))
                 length_threshold = float(params.get("length_threshold", preset["length_threshold"]))
 
-            color_precision = 2
+            color_precision = 3
             layer_difference = 16
             corner_threshold = int(params.get("corner_threshold", preset["corner_threshold"]))
             max_iterations = int(params.get("max_iterations", preset["max_iterations"]))
@@ -207,12 +221,16 @@ class VTracerEngine(AbstractTracer):
                 path_precision,
             )
 
-            # Cleanup temp enhanced image
+            # Cleanup temp supersampled image
             if temp_enhanced_path and temp_enhanced_path.exists():
                 try:
                     temp_enhanced_path.unlink()
                 except Exception:
                     pass
+
+            # If supersampled, restore SVG coordinates to original image viewport
+            if scale_factor > 1 and w_orig > 0 and h_orig > 0:
+                _rescale_svg(output_svg_path, w_orig, h_orig, scale_factor)
 
             svg_size = output_svg_path.stat().st_size if output_svg_path.exists() else 0
             return {"success": True, "engine": f"{self.name}/BW", "error": None, "svg_size": svg_size}
@@ -230,3 +248,27 @@ class VTracerEngine(AbstractTracer):
             "none": "polygon",
         }
         return mapping.get(curve_fitting, "spline")
+
+
+def _rescale_svg(svg_path: Path, w_orig: int, h_orig: int, scale_factor: int):
+    """Wrap SVG contents in <g transform='scale(1/scale_factor)'> to restore original viewport."""
+    if scale_factor <= 1 or not svg_path.exists():
+        return
+    text = svg_path.read_text(encoding="utf-8")
+    # Remove XML declarations and comments
+    text_clean = re.sub(r'<\?xml[^>]*\?>', '', text)
+    text_clean = re.sub(r'<!--.*?-->', '', text_clean, flags=re.DOTALL)
+    # Extract inner content between <svg...> and </svg>
+    inner = re.sub(r'^\s*<svg[^>]*>', '', text_clean.strip())
+    inner = re.sub(r'</svg>\s*$', '', inner)
+
+    inv_scale = round(1.0 / scale_factor, 4)
+    scaled_svg = (
+        f'<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w_orig} {h_orig}" width="{w_orig}" height="{h_orig}">\n'
+        f'  <g transform="scale({inv_scale})">\n'
+        f'{inner}\n'
+        f'  </g>\n'
+        f'</svg>'
+    )
+    svg_path.write_text(scaled_svg, encoding="utf-8")

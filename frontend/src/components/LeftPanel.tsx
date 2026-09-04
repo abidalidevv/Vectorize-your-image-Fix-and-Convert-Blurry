@@ -5,6 +5,8 @@ import {
   quantizeImage,
   vectorizeImage,
   analyzeImage,
+  exportSVG,
+  exportPNG,
 } from '../api/client'
 
 type SectionId = 'image' | 'preprocess' | 'quantize' | 'vectorize'
@@ -66,7 +68,7 @@ export default function LeftPanel() {
     preprocessSettings, vectorizeSettings, numColors,
     setStage, setPreprocessedUrl, setQuantized, setVectorResult, setAnalysisResult,
     updatePreprocessSettings, updateVectorizeSettings, setNumColors,
-    setViewMode,
+    setViewMode, setShowExportModal,
   } = useAppStore()
 
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
@@ -150,6 +152,36 @@ export default function LeftPanel() {
       setStage('idle')
     } catch (err: any) {
       setStage('error', err?.response?.data?.detail || String(err))
+    }
+  }
+
+  const handleExportSVG = async () => {
+    if (!sessionId || !vectorResult) return
+    try {
+      const blob = await exportSVG(sessionId, true)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${imageInfo?.filename?.replace(/\.\w+$/, '') ?? 'vectorizer'}_vector.svg`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert('Export failed: ' + (err?.response?.data?.detail || err.message))
+    }
+  }
+
+  const handleExportPNG = async (scale: 1 | 2 | 4 | 8) => {
+    if (!sessionId || !vectorResult) return
+    try {
+      const blob = await exportPNG(sessionId, scale)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${imageInfo?.filename?.replace(/\.\w+$/, '') ?? 'vectorizer'}_${scale}x.png`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert('PNG export failed: ' + (err?.response?.data?.detail || err.message))
     }
   }
 
@@ -375,6 +407,38 @@ export default function LeftPanel() {
                 ? <><span className="spinner" style={{width:14,height:14}} /> Vectorizing…</>
                 : '◈ Vectorize'}
             </button>
+
+            {vectorResult && (
+              <div className="export-ready-card" style={{ marginTop: 14, padding: '12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ color: 'var(--success)', fontWeight: 600, fontSize: 12 }}>✓ Vector Ready</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{vectorResult.stats.path_count} paths</span>
+                </div>
+                <button
+                  className="btn btn-primary full-width"
+                  style={{ marginBottom: 8, fontWeight: 600 }}
+                  onClick={() => setShowExportModal(true)}
+                >
+                  ⤓ Export / Download As…
+                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleExportSVG}
+                    title="Download SVG"
+                  >
+                    ⬇ SVG
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleExportPNG(2)}
+                    title="Download 2× HD PNG"
+                  >
+                    ⬇ 2× PNG
+                  </button>
+                </div>
+              </div>
+            )}
           </Section>
         )}
 

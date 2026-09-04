@@ -17,6 +17,7 @@ export default function TopBar() {
     setStage, setImageInfo, setAnalysisResult,
     setPreprocessedUrl, setQuantized, setVectorResult,
     preprocessSettings, vectorizeSettings, numColors,
+    setShowExportModal,
     reset,
   } = useAppStore()
 
@@ -64,7 +65,7 @@ export default function TopBar() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${imageInfo?.filename?.replace(/\.\w+$/, '') ?? 'vectorforge'}_vector.svg`
+      a.download = `${imageInfo?.filename?.replace(/\.\w+$/, '') ?? 'vectorizer'}_vector.svg`
       a.click()
       URL.revokeObjectURL(url)
       setStage('idle')
@@ -81,7 +82,7 @@ export default function TopBar() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${imageInfo?.filename?.replace(/\.\w+$/, '') ?? 'vectorforge'}_${scale}x.png`
+      a.download = `${imageInfo?.filename?.replace(/\.\w+$/, '') ?? 'vectorizer'}_${scale}x.png`
       a.click()
       URL.revokeObjectURL(url)
       setStage('idle')
@@ -94,11 +95,11 @@ export default function TopBar() {
 
   return (
     <div className="topbar">
-      {/* Logo */}
-      <div className="topbar-logo">
+      {/* Logo Rebranded to Vectorizer AI */}
+      <div className="topbar-logo" title="Vectorizer AI — Local Raster to Vector Studio">
         <div className="topbar-logo-icon">V</div>
         <span className="topbar-logo-text">
-          Vector<span>Forge</span><span className="topbar-logo-suffix"> AI</span>
+          Vectorizer<span>AI</span>
         </span>
       </div>
 
@@ -131,58 +132,46 @@ export default function TopBar() {
         </button>
       )}
 
+      {/* Export actions */}
       <div className="topbar-actions">
         {vectorResult && (
           <>
+            {/* Prominent Export Button */}
+            <button
+              className="btn btn-primary btn-sm topbar-export-main-btn"
+              onClick={() => setShowExportModal(true)}
+              disabled={isProcessing}
+              data-tooltip="Open Export & Download Dialog (SVG, PNG up to 8×)"
+              data-tooltip-pos="bottom"
+            >
+              ⤓ <span className="btn-text">Export</span><span className="btn-text-full"> As…</span>
+            </button>
+
+            {/* Quick SVG download */}
             <button
               className="btn btn-secondary btn-sm"
               onClick={handleExportSVG}
               disabled={isProcessing}
-              data-tooltip="Download optimized SVG vector file"
+              data-tooltip="Quick Download Optimized SVG"
               data-tooltip-pos="bottom"
             >
               {stage === 'exporting' ? <span className="spinner" style={{width:12,height:12}} /> : null}
               ⬇ SVG
             </button>
 
+            {/* Quick PNG download */}
             <button
               className="btn btn-secondary btn-sm"
               disabled={isProcessing}
-              onClick={() => handleExportPNG(1)}
-              data-tooltip="Export PNG at original size"
+              onClick={() => handleExportPNG(2)}
+              data-tooltip="Quick Export 2× HD PNG"
               data-tooltip-pos="bottom"
             >
-              ⬇ PNG
+              ⬇ PNG (2×)
             </button>
-
-            <div className="topbar-png-scales">
-              <button
-                className="btn btn-ghost btn-sm btn-scale"
-                disabled={isProcessing}
-                onClick={() => handleExportPNG(2)}
-                data-tooltip="Export PNG at 2× resolution"
-                data-tooltip-pos="bottom"
-              >2×</button>
-              <button
-                className="btn btn-ghost btn-sm btn-scale"
-                disabled={isProcessing}
-                onClick={() => handleExportPNG(4)}
-                data-tooltip="Export PNG at 4× resolution"
-                data-tooltip-pos="bottom"
-              >4×</button>
-              <button
-                className="btn btn-ghost btn-sm btn-scale"
-                disabled={isProcessing}
-                onClick={() => handleExportPNG(8)}
-                data-tooltip="Export PNG at 8× resolution"
-                data-tooltip-pos="bottom"
-                data-tooltip-align="right"
-              >8×</button>
-            </div>
           </>
         )}
       </div>
     </div>
   )
 }
-

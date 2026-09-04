@@ -1,7 +1,7 @@
-# CLAUDE.md — VectorForge AI Developer & Agent Guide
+# CLAUDE.md — Vectorizer AI Developer & Agent Guide
 
 > **Context for Claude / AI Assistants working on this codebase**  
-> VectorForge AI is a production-quality, local-first raster-to-vector web application designed as an open-source alternative to Vectorizer.io. It runs 100% locally on Windows without requiring external APIs, cloud subscriptions, or API keys.
+> Vectorizer AI is a production-quality, local-first raster-to-vector web application designed as an open-source alternative to Vectorizer.io. It runs 100% locally on Windows without requiring external APIs, cloud subscriptions, or API keys.
 
 ---
 
@@ -72,6 +72,7 @@ vectorforge-ai/
 │   │   │   └── responses.py     # Pydantic response models
 │   │   ├── image_processing/
 │   │   │   ├── analyzer.py      # Color zones, complexity, edge density, mode recommendation
+│   │   │   ├── line_detector.py # Fine line detector & 2x supersampling without corner bulging
 │   │   │   ├── preprocessor.py  # Denoise, contrast, sharpen, bilateral filter, grayscale
 │   │   │   └── quantizer.py     # K-Means & Median-Cut color quantization & palette builder
 │   │   ├── vectorization/
@@ -109,9 +110,10 @@ vectorforge-ai/
 │   │   └── components/
 │   │       ├── TopBar.tsx       # Mode switch, file name, export actions
 │   │       ├── DropZone.tsx     # Drag-and-drop & clipboard paste
-│   │       ├── PreviewCanvas.tsx# Zoom (up to 2000%), pan, split slider
+│   │       ├── PreviewCanvas.tsx# Zoom (up to 2000%), pan, split slider (isolated canvas zoom)
 │   │       ├── LeftPanel.tsx    # Preprocessing, quantization, tracing controls
 │   │       ├── RightPanel.tsx   # Color palette, layer toggling, SVG stats
+│   │       ├── ExportModal.tsx  # SVG/PNG multi-scale export modal dialog
 │   │       └── StatusBar.tsx    # Zoom level, dimensions, engine status
 ├── samples/                     # Test images (PNG, B&W, logo, transparent)
 └── tests/

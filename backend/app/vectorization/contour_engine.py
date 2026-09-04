@@ -37,15 +37,18 @@ class ContourEngine(AbstractTracer):
             # Check for fine line enhancement
             trace_image_path = image_path
             temp_enhanced_path = None
+            scale_factor = 1
             if params.get("preserve_fine_lines", True):
                 temp_enhanced_path = image_path.parent / f"{image_path.stem}_contour_enhanced.png"
-                enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path)
+                enhanced_path, was_enhanced, scale_factor = enhance_fine_lines(image_path, temp_enhanced_path, scale=2)
                 if was_enhanced:
                     trace_image_path = enhanced_path
 
             pil_img = Image.open(trace_image_path).convert("RGB")
             img = np.array(pil_img)
-            h, w = img.shape[:2]
+            h_img, w_img = img.shape[:2]
+            w = w_img // scale_factor
+            h = h_img // scale_factor
 
             # Grayscale + threshold
             gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -96,7 +99,7 @@ class ContourEngine(AbstractTracer):
                 epsilon = max(simplify_tol * arc_len, 0.3)
                 approx = cv2.approxPolyDP(cnt, epsilon, True)
                 if len(approx) >= 3:
-                    subpaths.append(_contour_to_path_d(approx))
+                    subpaths.append(_contour_to_path_d(approx, scale_factor))
 
                 # Traverse all child holes of this outer contour
                 curr_hole = child_idx
@@ -106,7 +109,7 @@ class ContourEngine(AbstractTracer):
                     hole_eps = max(simplify_tol * hole_arc, 0.3)
                     hole_approx = cv2.approxPolyDP(hole_cnt, hole_eps, True)
                     if len(hole_approx) >= 3:
-                        subpaths.append(_contour_to_path_d(hole_approx))
+                        subpaths.append(_contour_to_path_d(hole_approx, scale_factor))
                     curr_hole = hierarchy[curr_hole][0]
 
                 if subpaths:
@@ -136,15 +139,21 @@ class ContourEngine(AbstractTracer):
             return {"success": False, "engine": self.name, "error": str(e), "svg_size": 0}
 
 
-def _contour_to_path_d(contour: np.ndarray) -> str:
+def _contour_to_path_d(contour: np.ndarray, scale_factor: int = 1) -> str:
     """Convert OpenCV contour to SVG path 'd' subpath string (M...L...Z)."""
     points = contour.squeeze()
     if points.ndim == 1:
         points = points.reshape(1, -1)
 
-    parts = [f"M {points[0][0]} {points[0][1]}"]
+    inv = 1.0 / scale_factor if scale_factor > 1 else 1.0
+    p0_x = points[0][0] * inv
+    p0_y = points[0][1] * inv
+    parts = [f"M {p0_x:.1f} {p0_y:.1f}" if inv != 1.0 else f"M {points[0][0]} {points[0][1]}"]
     for pt in points[1:]:
-        parts.append(f"L {pt[0]} {pt[1]}")
+        if inv != 1.0:
+            parts.append(f"L {pt[0] * inv:.1f} {pt[1] * inv:.1f}")
+        else:
+            parts.append(f"L {pt[0]} {pt[1]}")
     parts.append("Z")
     return " ".join(parts)
 
