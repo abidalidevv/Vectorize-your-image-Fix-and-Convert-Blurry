@@ -161,21 +161,34 @@ png_bytes = resvg_py.svg_to_bytes(
 VTracer generates `<svg width="W" height="H">` without a `viewBox`.  
 Always pass SVG content through `utils.svg_optimizer.ensure_viewbox(svg_content)` before saving or returning. This adds `viewBox="0 0 W H"`, which is mandatory for responsive scaling and 2000% crisp browser rendering without clipping.
 
-### 4. Fine Line & Concentric Circle Preservation (CRITICAL)
+### 4. Fine Line & Concentric Circle Preservation (Line Art / B&W Mode)
 - 1-pixel lines (radar rings, concentric circles, technical sketches) have zero area in polygonal tracing.
 - If `filter_speckle > 0`, VTracer treats them as speckle noise and removes them.
-- If `hierarchical == "stacked"`, background white polygons paint over thin lines in painter's order.
 - In `vtracer` binary mode, polygon inversion can cause the entire canvas to fill as a solid black rectangle.
-- **Rules for line art & drawings**:
-  1. Use `line_detector.py` to detect and reinforce thin lines orthogonally (`cv2.MORPH_CROSS` 3x3) so they attain a stable 2D manifold without rounding sharp corners.
-  2. Always trace with `hierarchical="cutout"` so background patches are carved out around the lines.
-  3. Set `filter_speckle=0` and `length_threshold <= 2.0`.
-  4. In `ContourEngine`, always use `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`) so nested concentric shapes never fill as solid black disks.
+- **Rules for monochrome line art & technical drawings (`trace_bw`)**:
+  1. `engine_selector.py` auto-detects monochrome line art (`detect_line_art`) and routes to `trace_bw`.
+  2. `line_detector.py` reinforces thin lines orthogonally (`cv2.MORPH_CROSS` 3x3) so delicate curves attain a stable 2D manifold without rounding sharp corners.
+  3. Uses `hierarchical="cutout"` specifically for line art so interior white centers do not occlude thin black strokes.
+  4. Sets `filter_speckle=0` and `length_threshold <= 2.0`.
+  5. In `ContourEngine`, uses `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`) so nested concentric shapes never fill as solid black disks.
 
-### 5. Pydantic Settings
+### 5. Color Vectorization & Hierarchy Rule (CRITICAL)
+- **Always use `hierarchical="stacked"` for color images and logos (`trace`)**:
+  - In `cutout` mode, independently fitted Bézier splines leave microscopic gaps (e.g. 1,632 transparent gap pixels on complex shapes). Over dark canvas backgrounds (like `.preview-area.checkerboard` `#121316`), these transparent seams bleed through as **black triangular wedges** at line intersections and polygon junctions.
+  - In `cutout` mode, circular rims are split into disjoint halves (e.g. Path 9 and Path 13) causing stepped perimeter notches/dents.
+  - In `stacked` mode, background and base layers are continuous solids (`holes == 0`), completely eliminating transparent gap leaks, black triangles, and perimeter notches while maintaining smooth circular curvature.
+- **Default Presets**: `QUALITY_PRESETS["high"]` and `appStore.ts` default to `filter_speckle=1`, `color_precision=7`, `layer_difference=12`, `length_threshold=2.0`, `path_precision=6` for instant, one-click pristine vectorization.
+
+### 6. Text & Typography Vectorization
+- **Vector Outlines (Glyphs)**: Raster text in logos, slogans, badges, and headers is vectorized into resolution-independent Bézier curve paths (`<path>`). Text never pixelates or blurs even at 2000% zoom.
+- **Letter Counters (Holes)**: Letters with interior enclosures (such as 'O', 'A', 'P', 'B', 'D', '8') are carved out cleanly via compound SVG paths / subpaths.
+- **Diacritics & Punctuation**: `filter_speckle=1` ensures dots on 'i' and 'j', periods, commas, and small quotation marks are preserved rather than pruned as noise.
+- **Blurry Text Enhancement**: For low-resolution raster text, enable **Sharpen Image** (strength `0.5`–`0.8`) in the Preprocessing panel before tracing to crisp up glyph contours.
+
+### 7. Pydantic Settings
 Settings are declared using `pydantic_settings.BaseSettings` (not `pydantic.BaseSettings` which was removed in Pydantic v2).
 
-### 6. Frontend Imports
+### 8. Frontend Imports
 All component imports in `frontend/src/components/*.tsx` import from `../store/appStore` and `../api/client` (single `../`, not double `../../`).
 
 ---
@@ -243,7 +256,7 @@ The web UI dynamically adapts across three primary screen tiers:
 
 Always verify these after making changes:
 ```powershell
-# 1. Backend Pytest suite (9 tests)
+# 1. Backend Pytest suite (11 tests, including color circle & line art preservation)
 python -m pytest backend/tests/test_vectorforge.py -v
 
 # 2. End-to-end HTTP pipeline test

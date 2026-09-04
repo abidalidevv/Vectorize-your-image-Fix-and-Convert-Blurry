@@ -2,7 +2,7 @@
 
 > **System Memory Bank, Technical Blueprint & Agent Hand-off Guide**  
 > **Author**: [Abid Ali](https://abidalidev.com) • [GitHub (@abidalidevv)](https://github.com/abidalidevv) • **Repository**: [Vectorize-your-image-Fix-and-Convert-Blurry](https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry)  
-> **Version**: `1.0.3` • **Status**: Production-Ready, Verified & Tested 100% Locally
+> **Version**: `1.0.4` • **Status**: Production-Ready, Verified & Tested 100% Locally
 
 ---
 
@@ -40,7 +40,7 @@ vectorforge-ai/
 │   │   │   └── quantizer.py       # K-Means clustering, Median-Cut, palette extractor
 │   │   ├── vectorization/
 │   │   │   ├── base.py            # AbstractTracer Interface class
-│   │   │   ├── vtracer_engine.py  # Primary Engine: Rust VTracer wrapper (cutout hierarchy)
+│   │   │   ├── vtracer_engine.py  # Primary Engine: Rust VTracer wrapper (stacked for color, cutout for B&W)
 │   │   │   ├── contour_engine.py  # Fallback Engine: OpenCV RETR_CCOMP + compound paths
 │   │   │   └── engine_selector.py # Dynamic engine dispatcher with auto line-art detection
 │   │   ├── export/
@@ -57,7 +57,7 @@ vectorforge-ai/
 │   │       ├── vectorize.py       # POST /api/vectorize, GET /api/svg/{session_id}
 │   │       └── export.py          # POST /api/export/svg, POST /api/export/png
 │   └── tests/
-│       └── test_vectorforge.py    # Pytest Unit & Integration Test Suite (10 Tests)
+│       └── test_vectorforge.py    # Pytest Unit & Integration Test Suite (11 Tests)
 │
 ├── frontend/                      # React 19 + TypeScript + Vite + Zustand
 │   ├── package.json               # Frontend Dependencies & Scripts
@@ -239,3 +239,11 @@ When continuing or extending VectorForge AI:
    - Do not break the `@media (max-width: 820px)` tabbed layout.
 5. **Keep Tooltips Positioned Downward**:
    - Any new buttons placed in `TopBar` must specify `data-tooltip-pos="bottom"`.
+6. **Color vs. Line Art Hierarchy Rule (CRITICAL)**:
+   - For color vectorization (`trace`), always maintain `hierarchical="stacked"`. `cutout` mode creates floating-point Bézier seam gaps (visible as black triangular wedges over dark canvas) and splits circular rims into disjoint halves with stepped notches. `stacked` mode guarantees 0 seam gaps, unbroken circular arcs, and clean intersecting lines.
+   - For monochrome line art / technical drawings, `trace_bw` uses `cutout` with `filter_speckle=0` to preserve fine concentric circles without background polygon occlusion.
+7. **Text & Typography Vectorization**:
+   - Raster text is converted into resolution-independent Bézier glyph paths (`<path>`).
+   - Letters with inner holes ('O', 'A', 'P', 'B', etc.) use compound SVG paths to ensure transparent counters.
+   - `filterSpeckle: 1` prevents dots on 'i'/'j' and punctuation marks from being removed as noise.
+
