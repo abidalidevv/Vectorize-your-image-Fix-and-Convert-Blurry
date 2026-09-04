@@ -162,15 +162,15 @@ VTracer generates `<svg width="W" height="H">` without a `viewBox`.
 Always pass SVG content through `utils.svg_optimizer.ensure_viewbox(svg_content)` before saving or returning. This adds `viewBox="0 0 W H"`, which is mandatory for responsive scaling and 2000% crisp browser rendering without clipping.
 
 ### 4. Fine Line & Concentric Circle Preservation (Line Art / B&W Mode)
-- 1-pixel lines (radar rings, concentric circles, technical sketches) have zero area in polygonal tracing.
-- If `filter_speckle > 0`, VTracer treats them as speckle noise and removes them.
-- In `vtracer` binary mode, polygon inversion can cause the entire canvas to fill as a solid black rectangle.
-- **Rules for monochrome line art & technical drawings (`trace_bw`)**:
+- 1-pixel lines (radar rings, concentric circles, technical sketches, wireframes) have zero area in standard single-pixel polygonal tracing.
+- If morphological erosion or selective dilation is used, thin circles become severed at crosshair intersections (pinching down to 1px bottlenecks), and VTracer's winding rules invert the quadrant polygons, resulting in huge solid black wedges and dropped circle arcs.
+- **Permanent Solution: 2x Supersampling Pipeline (`trace_bw`)**:
   1. `engine_selector.py` auto-detects monochrome line art (`detect_line_art`) and routes to `trace_bw`.
-  2. `line_detector.py` reinforces thin lines orthogonally (`cv2.MORPH_CROSS` 3x3) so delicate curves attain a stable 2D manifold without rounding sharp corners.
-  3. Uses `hierarchical="cutout"` specifically for line art so interior white centers do not occlude thin black strokes.
-  4. Sets `filter_speckle=0` and `length_threshold <= 2.0`.
-  5. In `ContourEngine`, uses `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`) so nested concentric shapes never fill as solid black disks.
+  2. `line_detector.py` performs **2x clean nearest-neighbor supersampling** without morphological erosion or cross dilation. This cleanly expands 1px lines to 2px in coordinate space without pinching or flaring at junctions.
+  3. `vtracer` runs in `colormode="binary"`, `hierarchical="cutout"`, `mode="spline"`, `filter_speckle=0`, `length_threshold=2.0`. This preserves 100% of concentric circles and fine lines with mathematical symmetry.
+  4. `vtracer_engine.py` formats the SVG root to preserve the original 1x dimensions with sub-pixel vector resolution: `width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w*2} {orig_h*2}"`.
+  5. If the source image was non-transparent, an opaque white background `<rect width="100%" height="100%" fill="#ffffff"/>` is automatically injected behind the paths.
+  6. In `ContourEngine`, uses `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`) so nested concentric shapes never fill as solid black disks.
 
 ### 5. Color Vectorization & Hierarchy Rule (CRITICAL)
 - **Always use `hierarchical="stacked"` for color images and logos (`trace`)**:

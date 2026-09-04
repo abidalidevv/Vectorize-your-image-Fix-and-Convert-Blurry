@@ -105,15 +105,19 @@ class VTracerEngine(AbstractTracer):
             trace_image_path = image_path
             temp_enhanced_path = None
             preserve_fine_lines = params.get("preserve_fine_lines", True)
+            used_scale = 1
+            orig_img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+            orig_h, orig_w = orig_img.shape[:2] if orig_img is not None else (300, 300)
 
             if preserve_fine_lines:
                 temp_enhanced_path = image_path.parent / f"{image_path.stem}_fine_enhanced.png"
-                enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path)
+                enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path, scale=2)
                 if was_enhanced:
                     trace_image_path = enhanced_path
                     hierarchical = "cutout"
                     filter_speckle = min(filter_speckle, 1)
                     length_threshold = min(length_threshold, 2.0)
+                    used_scale = 2
                     logger.info(f"VTracer fine line mode active for {image_path.name}")
 
             logger.info(f"VTracer tracing {trace_image_path} -> {output_svg_path}")
@@ -141,6 +145,20 @@ class VTracerEngine(AbstractTracer):
                 except Exception:
                     pass
 
+            if used_scale > 1 and output_svg_path.exists():
+                svg_content = output_svg_path.read_text(encoding="utf-8")
+                import re
+
+                def fix_root(m):
+                    tag = m.group(0)
+                    tag = re.sub(r'\s+width="[^"]*"', '', tag)
+                    tag = re.sub(r'\s+height="[^"]*"', '', tag)
+                    tag = re.sub(r'\s+viewBox="[^"]*"', '', tag)
+                    return f'{tag[:-1]} width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w * used_scale} {orig_h * used_scale}">'
+
+                svg_content = re.sub(r'<svg\b[^>]*>', fix_root, svg_content, count=1)
+                output_svg_path.write_text(svg_content, encoding="utf-8")
+
             svg_size = output_svg_path.stat().st_size if output_svg_path.exists() else 0
             logger.info(f"VTracer wrote SVG: {output_svg_path} ({svg_size} bytes)")
 
@@ -162,28 +180,39 @@ class VTracerEngine(AbstractTracer):
 
     def trace_bw(self, image_path: Path, output_svg_path: Path, params: dict) -> dict:
         """
-        Trace as B&W/line art using selective thin-line enhancement and cutout hierarchy.
-        Preserves thin concentric circles while keeping junctions and crosshairs crisp.
+        Trace as B&W/line art using 2x supersampling and binary cutout hierarchy.
+        Preserves thin concentric circles, crosshairs, and fine lines with 100% integrity,
+        preventing intersection webbing and line severance.
         """
         try:
             preset_name = params.get("quality_preset", "balanced")
             preset = QUALITY_PRESETS.get(preset_name, QUALITY_PRESETS["balanced"]).copy()
 
-            colormode = "color"
-            hierarchical = "cutout"
-            mode = self._get_mode(params)
+            orig_img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+            orig_h, orig_w = orig_img.shape[:2] if orig_img is not None else (300, 300)
+            has_alpha = orig_img is not None and len(orig_img.shape) == 3 and orig_img.shape[2] == 4
 
             # Fine line detail preservation
             trace_image_path = image_path
             temp_enhanced_path = image_path.parent / f"{image_path.stem}_fine_enhanced_bw.png"
-            enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path)
+            scale_factor = 2
+            enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path, scale=scale_factor)
+
+            mode = self._get_mode(params)
+
             if was_enhanced:
                 trace_image_path = enhanced_path
+                colormode = "binary"
+                hierarchical = "cutout"
                 filter_speckle = 0
                 length_threshold = min(float(params.get("length_threshold", 2.0)), 2.0)
+                used_scale = scale_factor
             else:
+                colormode = "color"
+                hierarchical = "cutout"
                 filter_speckle = int(params.get("filter_speckle", 0))
                 length_threshold = float(params.get("length_threshold", preset["length_threshold"]))
+                used_scale = 1
 
             color_precision = 2
             layer_difference = 16
@@ -191,6 +220,8 @@ class VTracerEngine(AbstractTracer):
             max_iterations = int(params.get("max_iterations", preset["max_iterations"]))
             splice_threshold = int(params.get("splice_threshold", preset["splice_threshold"]))
             path_precision = int(preset.get("path_precision", 6))
+
+            logger.info(f"VTracer BW tracing {trace_image_path} -> {output_svg_path} (colormode={colormode}, scale={used_scale})")
 
             vtracer.convert_image_to_svg_py(
                 str(trace_image_path),
@@ -214,6 +245,21 @@ class VTracerEngine(AbstractTracer):
                     temp_enhanced_path.unlink()
                 except Exception:
                     pass
+
+            if output_svg_path.exists():
+                svg_content = output_svg_path.read_text(encoding="utf-8")
+                import re
+
+                def fix_root(m):
+                    tag = m.group(0)
+                    tag = re.sub(r'\s+width="[^"]*"', '', tag)
+                    tag = re.sub(r'\s+height="[^"]*"', '', tag)
+                    tag = re.sub(r'\s+viewBox="[^"]*"', '', tag)
+                    bg_rect = '\n<rect width="100%" height="100%" fill="#ffffff"/>' if not has_alpha else ''
+                    return f'{tag[:-1]} width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w * used_scale} {orig_h * used_scale}">{bg_rect}'
+
+                svg_content = re.sub(r'<svg\b[^>]*>', fix_root, svg_content, count=1)
+                output_svg_path.write_text(svg_content, encoding="utf-8")
 
             svg_size = output_svg_path.stat().st_size if output_svg_path.exists() else 0
             return {"success": True, "engine": f"{self.name}/BW", "error": None, "svg_size": svg_size}

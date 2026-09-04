@@ -76,11 +76,11 @@ def detect_line_art(img: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def enhance_fine_lines(image_path: Path, output_path: Path) -> Tuple[Path, bool]:
+def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 2) -> Tuple[Path, bool]:
     """
-    If image contains fine line art (1-2px thin lines), selectively enhance ONLY thin strokes
-    while preserving existing thick lines (crossbars, borders) at their exact native thickness.
-    Prevents corner-webbing / trumpet flares at line junctions while preserving concentric circles.
+    If image contains fine line art (1-2px thin lines), supersample 2x using nearest-neighbor.
+    Preserves thin concentric circles, radar rings, and fine contours without morphological distortion,
+    pinching, or corner-webbing at line intersections.
     Returns (enhanced_path, was_enhanced).
     """
     try:
@@ -94,40 +94,30 @@ def enhance_fine_lines(image_path: Path, output_path: Path) -> Tuple[Path, bool]
 
         logger.info(
             f"Preserving fine lines for {image_path.name} "
-            f"(thin_line_ratio={analysis['thin_line_ratio']})"
+            f"(thin_line_ratio={analysis['thin_line_ratio']}, scale={scale}x)"
         )
 
+        h, w = img.shape[:2]
         has_alpha = len(img.shape) == 3 and img.shape[2] == 4
         if has_alpha:
             rgb = img[:, :, :3]
-            alpha = img[:, :, 3]
-            gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
-            _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-            bin_inv = cv2.bitwise_and(bin_inv, alpha)
+            alpha = img[:, :, 3] / 255.0
+            white = np.ones_like(rgb) * 255
+            comp = (rgb * alpha[:, :, None] + white * (1.0 - alpha[:, :, None])).astype(np.uint8)
+            gray = cv2.cvtColor(comp, cv2.COLOR_BGR2GRAY)
         else:
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-            _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-        kernel_cross = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        # Find thick structures (lines that survive 1px erosion)
-        eroded = cv2.erode(bin_inv, kernel_cross, iterations=1)
-        thick_restored = cv2.dilate(eroded, kernel_cross, iterations=1)
-        thick_lines = cv2.bitwise_and(thick_restored, bin_inv)
+        _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-        # Isolate thin lines (< 2px)
-        thin_lines = cv2.bitwise_and(bin_inv, cv2.bitwise_not(thick_lines))
-
-        # Dilate ONLY the thin lines by 1px orthogonally
-        dilated_thin = cv2.dilate(thin_lines, kernel_cross, iterations=1)
-
-        # Combine: original thick lines + reinforced thin lines
-        enhanced_inv = cv2.bitwise_or(thick_lines, dilated_thin)
-
-        # Invert back to black lines on white canvas
-        enhanced = cv2.bitwise_not(enhanced_inv)
+        # 2x supersampling via nearest neighbor:
+        # Thin 1px lines become 2px in coordinate space without any asymmetric dilation or pinching
+        up = cv2.resize(bin_inv, (w * scale, h * scale), interpolation=cv2.INTER_NEAREST)
+        enhanced = cv2.bitwise_not(up)
 
         if has_alpha:
-            out_img = cv2.merge([enhanced, enhanced, enhanced, alpha])
+            alpha_up = cv2.resize(img[:, :, 3], (w * scale, h * scale), interpolation=cv2.INTER_NEAREST)
+            out_img = cv2.merge([enhanced, enhanced, enhanced, alpha_up])
         else:
             out_img = cv2.merge([enhanced, enhanced, enhanced])
 

@@ -183,6 +183,15 @@ def test_fine_line_and_concentric_circles_preservation():
     # 5. Outer circle around r=126-130
     assert any(122 <= r <= 132 for r in detected_circles), "Outer circle (r~128) missing!"
 
+    # 6. Verify 4-quadrant symmetry: ensure no quadrant has missing arcs or thick black wedges
+    q1 = np.sum(r_img[0:150, 150:300] < 128)
+    q2 = np.sum(r_img[0:150, 0:150] < 128)
+    q3 = np.sum(r_img[150:300, 0:150] < 128)
+    q4 = np.sum(r_img[150:300, 150:300] < 128)
+    mean_q = (q1 + q2 + q3 + q4) / 4.0
+    for i, q in enumerate([q1, q2, q3, q4], 1):
+        assert abs(q - mean_q) / mean_q < 0.20, f"Quadrant Q{i} has asymmetric pixel count ({q} vs mean {mean_q:.1f}) indicating distortion/wedging!"
+
 
 def test_color_vectorization_circle_and_junction_integrity():
     """Verify that color vectorization (test_complex.png) has 0 seam holes, smooth circle, and no black wedges."""

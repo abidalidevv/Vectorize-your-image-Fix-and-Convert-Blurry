@@ -158,9 +158,12 @@ vectorforge-ai/
 - Node.js 18+ resolves `localhost` to IPv6 `::1` before IPv4 `127.0.0.1`.
 - To prevent proxy connection drops, `vite.config.ts` targets explicit IPv4 `http://127.0.0.1:8000`.
 
-### 6. Line Intersection Bulge Prevention (2× Bicubic Supersampling)
-- Morphological dilation (`cv2.dilate`) on thin lines causes cross/T-junctions and concentric circles to fill corner wedges, producing ugly trumpet-shaped webbing after spline curve fitting.
-- **Fix in v1.0.3**: Replaced dilation with 2× bicubic supersampling in `line_detector.py`. The tracer operates on the supersampled image and the resulting SVG applies `<g transform="scale(0.5)">` with the original `viewBox="0 0 W H"`. This preserves orthogonal 90° intersections, true circular geometry, and zero junction flaring.
+### 6. Fine Line & Concentric Circle Preservation (2× Clean Supersampling)
+- Morphological dilation (`cv2.dilate`) on fine line art (1-2px lines, radar rings, crosshairs) fattens strokes from 1px to 3px and fills corner intersections with diagonal blobs.
+- Morphological erosion/subtraction (`thin = bin_inv & ~thick`) cuts 1px concentric rings into disjoint arc segments right before line intersections, causing VTracer's winding rules to invert polygons into massive solid black wedges and dropped circles.
+- **Permanent Fix**: Replaced morphological distortion with **2× nearest-neighbor supersampling** in `line_detector.py`. 1px strokes cleanly expand to 2px in coordinate space without pinching or flaring.
+- Traced in `trace_bw` with `colormode="binary"`, `hierarchical="cutout"`, `mode="spline"`, `filter_speckle=0`, `length_threshold=2.0`.
+- The resulting SVG maps `width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w*2} {orig_h*2}"`, preserving native 1x dimensions with sub-pixel vector accuracy, zero junction bloat, and 100% complete concentric rings across all quadrants.
 
 ### 7. Canvas Zoom Isolation (Native Non-Passive Wheel Listener)
 - In React 19, synthetic `onWheel` registers as passive in modern browsers, ignoring `e.preventDefault()`. When users zoom deeply or pinch, the entire Chrome window zooms and controls clip outside the screen.

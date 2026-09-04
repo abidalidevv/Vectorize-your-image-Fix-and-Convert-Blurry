@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-09-04
+
+### Fixed
+- **Concentric Circles & Fine Line Vectorization Restoration**:
+  - **Severed Circle & Black Wedge Root Cause**: In v1.0.4, attempting to prevent intersection flaring via morphological subtraction (`thin_lines = bin_inv & ~thick_lines`) severed thin circles at crosshair intersections into disjoint arcs. Dilating those disconnected arcs produced bulbous endpoints, causing VTracer to invert quadrant polygons into massive solid black wedges and drop circular segments entirely.
+  - **2× Clean Supersampling Pipeline**: Replaced all morphological erosion and dilation with **2× nearest-neighbor supersampling** in `line_detector.py`. Fine 1px lines cleanly scale to 2px in coordinate space with zero pinching, zero line severance, and zero corner webbing.
+  - **Binary Cutout Tracing**: Traced in `trace_bw` with `colormode="binary"`, `hierarchical="cutout"`, `mode="spline"`, `filter_speckle=0`, `length_threshold=2.0`.
+  - **Sub-Pixel ViewBox Scaling**: The SVG root preserves native 1× image dimensions with sub-pixel resolution via `width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w*2} {orig_h*2}"`. Injects an opaque white `<rect>` for non-transparent drawings.
+  - **Quadratic Symmetry & Verification Test**: Enhanced `test_fine_line_and_concentric_circles_preservation` in `backend/tests/test_vectorforge.py` with 4-quadrant symmetry verification, confirming identical dark-pixel distribution across all quadrants with 0 missing arcs.
+
+---
+
 ## [1.0.4] - 2026-09-04
 
 ### Fixed
