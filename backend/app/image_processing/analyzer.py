@@ -61,11 +61,21 @@ def analyze_image(image_path: Path) -> dict:
         # ── Dominant colors ────────────────────────────────────────────────
         dominant_colors = _extract_dominant_colors(small, n=8)
 
+        # ── Line art detection ─────────────────────────────────────────────
+        from image_processing.line_detector import detect_line_art
+        line_info = detect_line_art(img_np)
+
         # ── Mode recommendation ────────────────────────────────────────────
         recommended_mode, confidence, notes = _recommend_mode(
             unique_count, saturation_mean, saturation_std,
             is_grayscale, edge_density, complexity_score
         )
+
+        # If thin line art was detected, ensure recommendation is bw
+        if line_info["has_fine_lines"] and is_grayscale:
+            recommended_mode = "bw"
+            confidence = max(confidence, 0.95)
+            notes = "Fine line art / drawing detected with thin contours. Line preservation recommended."
 
         return {
             "recommended_mode": recommended_mode,
@@ -77,6 +87,9 @@ def analyze_image(image_path: Path) -> dict:
             "edge_density": round(edge_density, 4),
             "complexity_score": round(complexity_score, 6),
             "saturation_mean": round(saturation_mean, 4),
+            "is_line_art": line_info["is_line_art"],
+            "has_fine_lines": line_info["has_fine_lines"],
+            "thin_line_ratio": line_info["thin_line_ratio"],
             "width": w,
             "height": h,
             "notes": notes,

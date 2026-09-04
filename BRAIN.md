@@ -2,7 +2,7 @@
 
 > **System Memory Bank, Technical Blueprint & Agent Hand-off Guide**  
 > **Author**: [Abid Ali](https://abidalidev.com) • [GitHub (@abidalidevv)](https://github.com/abidalidevv) • **Repository**: [Vectorize-your-image-Fix-and-Convert-Blurry](https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry)  
-> **Version**: `1.0.1` • **Status**: Production-Ready, Verified & Tested 100% Locally
+> **Version**: `1.0.2` • **Status**: Production-Ready, Verified & Tested 100% Locally
 
 ---
 
@@ -35,13 +35,14 @@ vectorforge-ai/
 │   │   │   └── responses.py       # Pydantic Schemas for Response Payloads
 │   │   ├── image_processing/
 │   │   │   ├── analyzer.py        # Edge density (Sobel), color variance, auto-mode selector
+│   │   │   ├── line_detector.py   # Fine line detector & orthogonal line reinforcement (1-2px)
 │   │   │   ├── preprocessor.py    # Denoise, CLAHE contrast, sharpen, bg removal, cleanup
 │   │   │   └── quantizer.py       # K-Means clustering, Median-Cut, palette extractor
 │   │   ├── vectorization/
 │   │   │   ├── base.py            # AbstractTracer Interface class
-│   │   │   ├── vtracer_engine.py  # Primary Engine: Rust VTracer wrapper
-│   │   │   ├── contour_engine.py  # Fallback Engine: OpenCV findContours + approxPolyDP
-│   │   │   └── engine_selector.py # Dynamic engine dispatcher
+│   │   │   ├── vtracer_engine.py  # Primary Engine: Rust VTracer wrapper (cutout hierarchy)
+│   │   │   ├── contour_engine.py  # Fallback Engine: OpenCV RETR_CCOMP + compound paths
+│   │   │   └── engine_selector.py # Dynamic engine dispatcher with auto line-art detection
 │   │   ├── export/
 │   │   │   ├── svg_exporter.py    # Scour SVG optimizer & file saver
 │   │   │   └── png_exporter.py    # resvg-py multi-scale raster renderer (1x, 2x, 4x, 8x)
@@ -56,7 +57,7 @@ vectorforge-ai/
 │   │       ├── vectorize.py       # POST /api/vectorize, GET /api/svg/{session_id}
 │   │       └── export.py          # POST /api/export/svg, POST /api/export/png
 │   └── tests/
-│       └── test_vectorforge.py    # Pytest Unit & Integration Test Suite (9 Tests)
+│       └── test_vectorforge.py    # Pytest Unit & Integration Test Suite (10 Tests)
 │
 ├── frontend/                      # React 19 + TypeScript + Vite + Zustand
 │   ├── package.json               # Frontend Dependencies & Scripts

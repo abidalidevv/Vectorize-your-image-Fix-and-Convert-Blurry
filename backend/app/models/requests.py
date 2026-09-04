@@ -60,6 +60,8 @@ class VectorizeParams(BaseModel):
     # Mode flags
     group_by_color: bool = True
     remove_background: bool = False
+    preserve_fine_lines: bool = True
+    hierarchical: Optional[Literal["cutout", "stacked"]] = "cutout"
 
 
 class ExportSVGParams(BaseModel):

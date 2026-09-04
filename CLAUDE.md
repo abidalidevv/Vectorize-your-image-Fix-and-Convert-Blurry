@@ -159,10 +159,21 @@ png_bytes = resvg_py.svg_to_bytes(
 VTracer generates `<svg width="W" height="H">` without a `viewBox`.  
 Always pass SVG content through `utils.svg_optimizer.ensure_viewbox(svg_content)` before saving or returning. This adds `viewBox="0 0 W H"`, which is mandatory for responsive scaling and 2000% crisp browser rendering without clipping.
 
-### 4. Pydantic Settings
+### 4. Fine Line & Concentric Circle Preservation (CRITICAL)
+- 1-pixel lines (radar rings, concentric circles, technical sketches) have zero area in polygonal tracing.
+- If `filter_speckle > 0`, VTracer treats them as speckle noise and removes them.
+- If `hierarchical == "stacked"`, background white polygons paint over thin lines in painter's order.
+- In `vtracer` binary mode, polygon inversion can cause the entire canvas to fill as a solid black rectangle.
+- **Rules for line art & drawings**:
+  1. Use `line_detector.py` to detect and reinforce thin lines orthogonally (`cv2.MORPH_CROSS` 3x3) so they attain a stable 2D manifold without rounding sharp corners.
+  2. Always trace with `hierarchical="cutout"` so background patches are carved out around the lines.
+  3. Set `filter_speckle=0` and `length_threshold <= 2.0`.
+  4. In `ContourEngine`, always use `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`) so nested concentric shapes never fill as solid black disks.
+
+### 5. Pydantic Settings
 Settings are declared using `pydantic_settings.BaseSettings` (not `pydantic.BaseSettings` which was removed in Pydantic v2).
 
-### 5. Frontend Imports
+### 6. Frontend Imports
 All component imports in `frontend/src/components/*.tsx` import from `../store/appStore` and `../api/client` (single `../`, not double `../../`).
 
 ---

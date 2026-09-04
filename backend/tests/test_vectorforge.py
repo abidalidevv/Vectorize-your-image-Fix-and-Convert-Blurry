@@ -137,3 +137,48 @@ def test_export_svg_and_png():
     assert png_path.exists()
     assert png_res["renderer"] == "resvg"
     assert png_path.stat().st_size > 0
+
+
+def test_fine_line_and_concentric_circles_preservation():
+    """Verify that thin 1-pixel concentric circles in test_bw.png are 100% preserved."""
+    import resvg_py
+    import cv2
+    import numpy as np
+    from vectorization.engine_selector import select_and_trace
+
+    bw_path = SAMPLES_DIR / "test_bw.png"
+    out_svg = TMP_DIR / "test_bw_vectorized.svg"
+
+    # Test auto mode (should auto-detect line art and preserve fine rings)
+    result = select_and_trace(bw_path, out_svg, {"image_mode": "auto"})
+    assert result["success"] is True
+    assert out_svg.exists()
+
+    # Render vector to raster to verify visual presence of all concentric rings
+    svg_content = out_svg.read_text(encoding="utf-8")
+    png_bytes = resvg_py.svg_to_bytes(svg_content)
+    r_img = cv2.imdecode(np.frombuffer(png_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+
+    # Calculate radii of dark pixels from center (150, 150), excluding crosshair
+    ys, xs = np.where(r_img < 100)
+    radii = np.sqrt((xs - 150) ** 2 + (ys - 150) ** 2)
+    mask = (np.abs(xs - 150) > 3) & (np.abs(ys - 150) > 3)
+    circle_radii = radii[mask]
+
+    counts, bin_edges = np.histogram(circle_radii, bins=range(0, 150, 2))
+    detected_circles = {}
+    for r, c in zip(bin_edges, counts):
+        if c > 20:
+            detected_circles[int(r)] = int(c)
+
+    # Verify that all 4 inner concentric circles + outer circle exist:
+    # 1. Circle around r=24
+    assert any(20 <= r <= 28 for r in detected_circles), "Innermost circle (r~24) missing!"
+    # 2. Circle around r=48-50
+    assert any(46 <= r <= 54 for r in detected_circles), "Second circle (r~50) missing!"
+    # 3. Circle around r=74
+    assert any(70 <= r <= 78 for r in detected_circles), "Third circle (r~74) missing!"
+    # 4. Circle around r=98-100
+    assert any(94 <= r <= 104 for r in detected_circles), "Fourth circle (r~100) missing!"
+    # 5. Outer circle around r=126-130
+    assert any(122 <= r <= 132 for r in detected_circles), "Outer circle (r~128) missing!"

@@ -150,7 +150,18 @@ export const useAppStore = create<AppState>((set) => ({
     set({ imageInfo: info, sessionId: info.session_id, stage: 'idle', viewMode: 'original', mobileTab: 'canvas' }),
 
   setAnalysisResult: (result) =>
-    set({ analysisResult: result }),
+    set((state) => ({
+      analysisResult: result,
+      vectorizeSettings: {
+        ...state.vectorizeSettings,
+        imageMode: (result.recommended_mode === 'bw' || result.recommended_mode === 'sketch')
+          ? result.recommended_mode
+          : state.vectorizeSettings.imageMode,
+        filterSpeckle: (result.recommended_mode === 'bw' || result.recommended_mode === 'sketch')
+          ? 0
+          : state.vectorizeSettings.filterSpeckle,
+      },
+    })),
 
   setPreprocessedUrl: (url) =>
     set({ preprocessedUrl: url }),

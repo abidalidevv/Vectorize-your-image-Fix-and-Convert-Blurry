@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-09-04
+
+### Fixed
+- **Fine Line & Concentric Circle Preservation**: Fixed an issue where fine 1-pixel circular lines, radar rings, and technical line art were omitted in the vector output.
+  - **Speckle & Hierarchy Root Cause**: In VTracer's default stacked mode, `filter_speckle=4` treated thin lines as noise, and stacked background polygons occluded thin foreground strokes.
+  - **Line Art Detector (`line_detector.py`)**: Added automatic detection for fine line art and thin features (`thin_line_ratio > 0.15`).
+  - **Fine Line Enhancement**: Applied sub-pixel orthogonal line reinforcement (`cv2.MORPH_CROSS`) so delicate 1-2px curves attain stable 2D manifolds during vectorization.
+  - **Cutout Hierarchy & Zero-Speckle Tracing**: Forced `hierarchical="cutout"` and `filter_speckle=0` for line art and B&W modes, ensuring 100% of fine concentric circles and crosshairs are cleanly carved out and preserved.
+  - **ContourEngine Compound Paths**: Fixed `ContourEngine` to use `cv2.RETR_CCOMP` with compound SVG paths (`fill-rule="evenodd"`), preventing nested concentric shapes from filling in as solid black disks.
+- **Auto-mode Routing**: Updated `engine_selector.py` to automatically detect monochrome line art in `auto` mode and route to the high-fidelity line-preservation engine.
+- **Comprehensive Unit Tests**: Added `test_fine_line_and_concentric_circles_preservation` verifying all 4 concentric rings (radii ~24, ~50, ~74, ~100) and the outer circle are intact.
+
+---
+
 ## [1.0.1] - 2026-09-04
 
 ### Fixed
