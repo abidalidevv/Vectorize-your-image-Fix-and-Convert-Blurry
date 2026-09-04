@@ -114,8 +114,8 @@ const DEFAULT_PREPROCESS: PreprocessSettings = {
 const DEFAULT_VECTORIZE: VectorizeSettings = {
   imageMode: 'auto',
   qualityPreset: 'high',
-  colorPrecision: 7,
-  layerDifference: 12,
+  colorPrecision: 6,
+  layerDifference: 16,
   cornerThreshold: 60,
   lengthThreshold: 2.0,
   filterSpeckle: 0,

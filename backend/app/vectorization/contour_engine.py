@@ -37,18 +37,15 @@ class ContourEngine(AbstractTracer):
             # Check for fine line enhancement
             trace_image_path = image_path
             temp_enhanced_path = None
-            scale_factor = 1
             if params.get("preserve_fine_lines", True):
                 temp_enhanced_path = image_path.parent / f"{image_path.stem}_contour_enhanced.png"
-                enhanced_path, was_enhanced, scale_factor = enhance_fine_lines(image_path, temp_enhanced_path, scale=2)
+                enhanced_path, was_enhanced = enhance_fine_lines(image_path, temp_enhanced_path)
                 if was_enhanced:
                     trace_image_path = enhanced_path
 
             pil_img = Image.open(trace_image_path).convert("RGB")
             img = np.array(pil_img)
-            h_img, w_img = img.shape[:2]
-            w = w_img // scale_factor
-            h = h_img // scale_factor
+            h, w = img.shape[:2]
 
             # Grayscale + threshold
             gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -99,7 +96,7 @@ class ContourEngine(AbstractTracer):
                 epsilon = max(simplify_tol * arc_len, 0.3)
                 approx = cv2.approxPolyDP(cnt, epsilon, True)
                 if len(approx) >= 3:
-                    subpaths.append(_contour_to_path_d(approx, scale_factor))
+                    subpaths.append(_contour_to_path_d(approx))
 
                 # Traverse all child holes of this outer contour
                 curr_hole = child_idx
@@ -109,7 +106,7 @@ class ContourEngine(AbstractTracer):
                     hole_eps = max(simplify_tol * hole_arc, 0.3)
                     hole_approx = cv2.approxPolyDP(hole_cnt, hole_eps, True)
                     if len(hole_approx) >= 3:
-                        subpaths.append(_contour_to_path_d(hole_approx, scale_factor))
+                        subpaths.append(_contour_to_path_d(hole_approx))
                     curr_hole = hierarchy[curr_hole][0]
 
                 if subpaths:

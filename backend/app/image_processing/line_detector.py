@@ -76,34 +76,64 @@ def detect_line_art(img: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 2) -> Tuple[Path, bool, int]:
+def enhance_fine_lines(image_path: Path, output_path: Path) -> Tuple[Path, bool]:
     """
-    If image contains fine line art (1-2px thin lines), supersample the image by 2x
-    using bicubic interpolation. This turns 1px lines into smooth 2px anti-aliased manifolds
-    without filling in junction wedges or creating flared/trumpet bulging at line intersections.
-    Returns (enhanced_path, was_enhanced, scale_factor).
+    If image contains fine line art (1-2px thin lines), selectively enhance ONLY thin strokes
+    while preserving existing thick lines (crossbars, borders) at their exact native thickness.
+    Prevents corner-webbing / trumpet flares at line junctions while preserving concentric circles.
+    Returns (enhanced_path, was_enhanced).
     """
     try:
         img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
         if img is None:
-            return image_path, False, 1
+            return image_path, False
 
         analysis = detect_line_art(img)
         if not analysis["has_fine_lines"]:
-            return image_path, False, 1
+            return image_path, False
 
         logger.info(
-            f"Preserving fine lines for {image_path.name} via {scale}x supersampling "
+            f"Preserving fine lines for {image_path.name} "
             f"(thin_line_ratio={analysis['thin_line_ratio']})"
         )
 
-        h, w = img.shape[:2]
-        # Supersample with bicubic interpolation
-        upscaled = cv2.resize(img, (w * scale, h * scale), interpolation=cv2.INTER_CUBIC)
+        has_alpha = len(img.shape) == 3 and img.shape[2] == 4
+        if has_alpha:
+            rgb = img[:, :, :3]
+            alpha = img[:, :, 3]
+            gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
+            _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+            bin_inv = cv2.bitwise_and(bin_inv, alpha)
+        else:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+            _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-        cv2.imwrite(str(output_path), upscaled)
-        return output_path, True, scale
+        kernel_cross = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+        # Find thick structures (lines that survive 1px erosion)
+        eroded = cv2.erode(bin_inv, kernel_cross, iterations=1)
+        thick_restored = cv2.dilate(eroded, kernel_cross, iterations=1)
+        thick_lines = cv2.bitwise_and(thick_restored, bin_inv)
+
+        # Isolate thin lines (< 2px)
+        thin_lines = cv2.bitwise_and(bin_inv, cv2.bitwise_not(thick_lines))
+
+        # Dilate ONLY the thin lines by 1px orthogonally
+        dilated_thin = cv2.dilate(thin_lines, kernel_cross, iterations=1)
+
+        # Combine: original thick lines + reinforced thin lines
+        enhanced_inv = cv2.bitwise_or(thick_lines, dilated_thin)
+
+        # Invert back to black lines on white canvas
+        enhanced = cv2.bitwise_not(enhanced_inv)
+
+        if has_alpha:
+            out_img = cv2.merge([enhanced, enhanced, enhanced, alpha])
+        else:
+            out_img = cv2.merge([enhanced, enhanced, enhanced])
+
+        cv2.imwrite(str(output_path), out_img)
+        return output_path, True
 
     except Exception as e:
-        logger.warning(f"Fine line supersampling failed (using original): {e}")
-        return image_path, False, 1
+        logger.warning(f"Fine line enhancement failed (using original): {e}")
+        return image_path, False
