@@ -21,13 +21,24 @@
 
 ## 🖼️ Visual Showcase
 
-### 🖥️ Desktop Studio — 2000% Zoom, Bézier Spline Curves & Live Inspection
-![Desktop Studio](docs/screenshots/desktop-studio.png)
+### 🖥️ Full Studio — Raster Image Loaded & Interactive Canvas
+![Studio with Loaded Image](docs/screenshots/studio-original.png)
 
-### 📱 Responsive Mobile & Tablet Studio — Adaptive Segmented Navigation
+### 🔍 2000% Deep Zoom — Pure Scalable Bézier Curves (Zero Pixelation)
+![2000% Zoom Vector Result](docs/screenshots/vector-2000-zoom.png)
+
+### 🎛️ Studio Modules & Feature Breakdown
 <div align="center">
-  <img src="docs/screenshots/tablet-controls.png" width="48%" alt="Tablet Controls" />
-  <img src="docs/screenshots/tablet-canvas.png" width="48%" alt="Tablet Canvas Preview" />
+  <img src="docs/screenshots/image-info-ai.png" width="31%" alt="AI Mode Recommendation" />
+  <img src="docs/screenshots/quantize-controls.png" width="31%" alt="Preprocessing & Quantization" />
+  <img src="docs/screenshots/tracing-settings.png" width="31%" alt="Spline Tracing Controls" />
+</div>
+
+<br />
+
+<div align="center">
+  <img src="docs/screenshots/drop-zone.png" width="48%" alt="Empty Studio Drop Zone" />
+  <img src="docs/screenshots/vector-stats.png" width="48%" alt="Vector Statistics & Validation" />
 </div>
 
 ---
