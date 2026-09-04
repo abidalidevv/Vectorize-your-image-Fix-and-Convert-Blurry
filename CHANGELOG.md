@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-09-04
+
+### Fixed
+- **Circle Notch & Black Wedge Seam Gaps**: Fixed black triangular wedges at line intersections and stepped perimeter notches on circles.
+  - **Stacked Hierarchy for Color Mode**: Restored `hierarchical="stacked"` across color presets (`fast`, `balanced`, `high`, `ultra`). This eliminated 1,632 transparent seam gap pixels where the dark studio canvas background was bleeding through acute corners as black triangular wedges.
+  - **Continuous Circle Geometry**: In stacked mode, circle rims are vectorized as continuous, unbroken annular paths instead of being split into fragmented pieces, restoring perfectly smooth circular curvature with zero notches or dents.
+  - **Optimal Default Preset Calibration**: Tuned default vectorization parameters (`qualityPreset: 'high'`, `colorPrecision: 7`, `layerDifference: 12`, `filterSpeckle: 1`, `lengthThreshold: 2.0`) so clicking "Vectorize" directly without changing settings immediately yields pristine, clean vectors.
+  - **Automated Verification Test**: Added `test_color_vectorization_circle_and_junction_integrity` to verify 0 seam gap pixels, smooth circle circularity, and clean crossing junctions.
+
+---
+
 ## [1.0.3] - 2026-09-04
 
 ### Added

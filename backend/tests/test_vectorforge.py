@@ -182,3 +182,52 @@ def test_fine_line_and_concentric_circles_preservation():
     assert any(94 <= r <= 104 for r in detected_circles), "Fourth circle (r~100) missing!"
     # 5. Outer circle around r=126-130
     assert any(122 <= r <= 132 for r in detected_circles), "Outer circle (r~128) missing!"
+
+
+def test_color_vectorization_circle_and_junction_integrity():
+    """Verify that color vectorization (test_complex.png) has 0 seam holes, smooth circle, and no black wedges."""
+    import resvg_py
+    import cv2
+    import numpy as np
+    from vectorization.engine_selector import select_and_trace
+
+    complex_path = SAMPLES_DIR / "test_complex.png"
+    out_svg = TMP_DIR / "test_complex_vectorized.svg"
+
+    # Trace with default parameters
+    result = select_and_trace(complex_path, out_svg, {
+        "image_mode": "auto",
+        "quality_preset": "high",
+    })
+    assert result["success"] is True
+    assert out_svg.exists()
+
+    # Render vector to RGBA to inspect integrity
+    svg_content = out_svg.read_text(encoding="utf-8")
+    png_bytes = resvg_py.svg_to_bytes(svg_content)
+    rendered = cv2.imdecode(np.frombuffer(png_bytes, np.uint8), cv2.IMREAD_UNCHANGED)
+
+    # 1. Verify ZERO transparent seam gaps / holes
+    if rendered.shape[-1] == 4:
+        holes = int(np.count_nonzero(rendered[:, :, 3] < 250))
+        assert holes == 0, f"Expected 0 transparent seam holes, found {holes}!"
+
+    # 2. Verify blue circle integrity (smooth circle with no notches or dents)
+    blue_mask = ((rendered[:, :, 0] > 180) & (rendered[:, :, 2] < 100)).astype(np.uint8) * 255
+    cnts, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    assert len(cnts) > 0, "Blue circle must be detected!"
+    c = max(cnts, key=cv2.contourArea)
+    (cx, cy), r = cv2.minEnclosingCircle(c)
+    pts = c.reshape(-1, 2)
+    dists = np.sqrt((pts[:, 0] - cx) ** 2 + (pts[:, 1] - cy) ** 2)
+    r_diff = float(np.max(np.abs(dists - r)))
+    assert r_diff < 2.0, f"Circle perimeter deviation too high: {r_diff:.2f}px (stepped notch/dent)!"
+
+    # 3. Verify junction integrity (no black wedges/triangles at crossing)
+    # Crossing region: x=130..180, y=235..270
+    crossing_crop = rendered[235:270, 130:180]
+    dark_crossing = np.count_nonzero(
+        (crossing_crop[:, :, 0] < 30) & (crossing_crop[:, :, 1] < 30) & (crossing_crop[:, :, 2] < 30)
+    )
+    assert dark_crossing == 0, f"Found {dark_crossing} black wedge pixels at line crossing!"
+

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 QUALITY_PRESETS = {
     "fast": {
         "colormode": "color",
-        "hierarchical": "cutout",
+        "hierarchical": "stacked",
         "mode": "polygon",
         "filter_speckle": 2,
         "color_precision": 4,
@@ -33,11 +33,11 @@ QUALITY_PRESETS = {
     },
     "balanced": {
         "colormode": "color",
-        "hierarchical": "cutout",
+        "hierarchical": "stacked",
         "mode": "spline",
-        "filter_speckle": 0,
+        "filter_speckle": 1,
         "color_precision": 7,
-        "layer_difference": 12,
+        "layer_difference": 16,
         "corner_threshold": 60,
         "length_threshold": 2.5,
         "max_iterations": 10,
@@ -46,29 +46,29 @@ QUALITY_PRESETS = {
     },
     "high": {
         "colormode": "color",
-        "hierarchical": "cutout",
+        "hierarchical": "stacked",
         "mode": "spline",
-        "filter_speckle": 0,
-        "color_precision": 8,
-        "layer_difference": 8,
+        "filter_speckle": 1,
+        "color_precision": 7,
+        "layer_difference": 12,
         "corner_threshold": 60,
         "length_threshold": 2.0,
         "max_iterations": 15,
         "splice_threshold": 45,
-        "path_precision": 8,
+        "path_precision": 6,
     },
     "ultra": {
         "colormode": "color",
-        "hierarchical": "cutout",
+        "hierarchical": "stacked",
         "mode": "spline",
         "filter_speckle": 0,
         "color_precision": 8,
-        "layer_difference": 4,
+        "layer_difference": 6,
         "corner_threshold": 60,
-        "length_threshold": 1.0,
+        "length_threshold": 1.5,
         "max_iterations": 20,
         "splice_threshold": 45,
-        "path_precision": 10,
+        "path_precision": 8,
     },
 }
 
@@ -90,7 +90,7 @@ class VTracerEngine(AbstractTracer):
             preset = QUALITY_PRESETS.get(preset_name, QUALITY_PRESETS["balanced"]).copy()
 
             colormode = "color"
-            hierarchical = params.get("hierarchical", "cutout")
+            hierarchical = params.get("hierarchical") or preset.get("hierarchical", "stacked")
             mode = self._get_mode(params)
             filter_speckle = int(params.get("filter_speckle", preset["filter_speckle"]))
             color_precision = int(params.get("color_precision", preset["color_precision"]))
