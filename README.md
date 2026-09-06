@@ -7,13 +7,15 @@
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Rust Engine](https://img.shields.io/badge/VTracer-Rust%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=black)](https://github.com/visioncortex/vtracer)
+[![Pytest](https://img.shields.io/badge/Pytest-23%2F23%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests/test_vectorforge.py)
+[![Version](https://img.shields.io/badge/Version-1.1.0%20Pro-blueviolet?style=for-the-badge)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Author](https://img.shields.io/badge/Author-Abid%20Ali-blueviolet?style=for-the-badge&logo=google-chrome&logoColor=white)](https://abidalidev.com)
 [![GitHub Profile](https://img.shields.io/badge/GitHub-abidalidevv-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/abidalidevv)
 
 **Fix blurry logos, icons, and illustrations. Convert low-res raster images into crisp, infinitely scalable vector graphics (SVG) — 100% locally on your machine.**
 
-[Explore Features](#-key-features) • [Quick Start](#-quick-start-guide) • [Architecture](#-architecture) • [API Reference](#-api-endpoints) • [Developer Guide](CLAUDE.md) • [Portfolio](https://abidalidev.com)
+[Explore Features](#-key-features) • [Quick Start](#-quick-start-guide) • [Live Diagnostics](diagnose.html) • [Master Docs](documentation.html) • [Architecture](#-architecture) • [API Reference](#-api-endpoints) • [Developer Guide](CLAUDE.md) • [Portfolio](https://abidalidev.com)
 
 </div>
 
@@ -96,7 +98,50 @@ Online services like **Vectorizer.io** or subscription-based cloud converters lo
 - **SVG Export**: Processed through `scour` to strip redundant tags and enforce standard `viewBox="0 0 W H"` coordinates for web responsiveness.
 - **Multi-Scale PNG Export**: Uses `resvg-py` (standalone Rust SVG renderer) to render at 1×, 2×, 4×, and 8× resolutions with transparent or solid background.
 
-### 6. Full Mobile & Tablet Responsiveness
+### 6. Background Remover Studio (Fast & Ultra Pro Tiers)
+- **Fast Tier (`isnet-general-use`, ~178.6MB ONNX)**: General-use boundary segmentation for graphic logos, app icons, and product cutouts (~1.5s–3s CPU).
+- **Ultra Tier (`birefnet-general`, ~972.7MB ONNX)**: Bilateral Reference Network for high-resolution dichromatic matting (fine hair, animal fur, transparent glass).
+- **Edge Defringe Halo Choke (`cv2.erode`)**: Uses an elliptical morphological structuring element ($k \in [1, 9]$) to physically strip fringe bleeding from original backgrounds.
+- **Physical Alpha-Unmixing Color Decontamination**:
+  $$\text{true\_fg} = \text{np.clip}\left(\frac{\text{observed} - \text{bg\_color} \cdot (1 - \alpha)}{\alpha}, 0, 255\right)$$
+  Inverts optical compositing to eliminate backdrop color bleed in semi-transparent edges ($0.05 < \alpha < 0.95$).
+- **Zero-Arena Memory Management**: Configures ONNX Runtime with `enable_cpu_mem_arena = False` and proactive GC to prevent 822MB memory allocation crashes on Windows CPU.
+- **Resilient Fallback**: Gracefully falls back to Fast mode without 500 errors if Ultra weights are uncached.
+
+### 7. Image Enhancer Studio (Fast & Ultra Pro Tiers + Face Restoration)
+- **Fast Tier (`realesr-general-x4v3`, ~4.9MB ONNX)**: Lightweight neural super-resolution network upscaler + 6-stage classical CV pipeline (~1–2s).
+- **Ultra Tier (`RealESRGAN_x4plus`, ~67.1MB ONNX)**: 23-layer Residual-in-Residual Dense Block (RRDBNet) for maximum vector-ready clarity and edge reconstruction.
+- **Old Photo & Face Restoration (`GFPGANv1.4`, ~324.5MB ONNX)**:
+  - Detects faces with high-precision YuNet landmark detector (<3ms).
+  - Performs 512×512 affine similarity alignment to center facial geometry and eye pupils.
+  - Neural face reconstruction with Generative Facial Prior GAN.
+  - Gaussian radial falloff blending and inverse affine projection preserves original composition.
+  - Adjustable **Face Detail Blend (Fidelity)** slider (0.1–1.0).
+- **7-Stage Classical Enhancement Pipeline**:
+  1. Neural Super-Resolution (x4v3 Fast or x4plus Ultra)
+  2. Bilateral Filter (edge-preserving denoising)
+  3. CIE-LAB CLAHE (adaptive contrast equalization on $L^*$ channel)
+  4. Gaussian High-Pass Unsharp Masking ($I_{\text{sharp}} = 1.5 \cdot I - 0.5 \cdot G_\sigma(I)$)
+  5. Morphological Edge Refinement (smoothes boundary stairstepping)
+  6. HSV Dynamic Range & Saturation Vibrance Tuning
+  7. Optional GFPGAN Face & Eye Restoration
+
+### 8. Magic Eraser & Inpainting Studio (Fast & Pro Tiers)
+- **Fast Fourier Convolutions (`LaMa-ONNX`, ~198.4MB ONNX)**: Large Mask Inpainting network trained on high-resolution image textures to synthesize realistic backgrounds.
+- **Interactive Canvas Brush Overlay**: Smooth HTML5 canvas layered directly on top of the original image with synchronized zoom, pan, and real-time circular brush cursor.
+- **Adjustable Brush Radius**: 5px to 120px brush slider with live preview and quick-select presets (15px, 30px, 50px, 80px).
+- **Edge Margin Expansion (Dilation)**: Morphological elliptical dilation removes background halos around removed objects.
+- **Pro Edge Gradient Refinement**: Multi-scale bilateral boundary smoothing and seamless color matching.
+- **Multi-Level Undo & Clear**: Instant stroke undo and mask clearing.
+- **Seamless Export & Handoff**: Jump straight from Inpainting to Vectorizer or Enhancer.
+
+### 9. Live Diagnostics Dashboard (`diagnose.html`)
+- Dedicated browser dashboard and `GET /api/diagnostics` endpoint for comprehensive telemetry across all **7 AI & neural models**.
+- Audits on-disk neural model weights, byte sizes, ONNX Runtime execution providers (`CPUExecutionProvider`, `CUDAExecutionProvider`, `DmlExecutionProvider`), host RAM load, and active sessions.
+- In-browser synthetic probe runner sends live synthetic test rasters to `/health`, `/api/diagnostics`, `/api/remove-bg`, `/api/enhance`, and `/api/inpaint` with latency benchmarking.
+- One-click copyable JSON diagnostic report for troubleshooting and GitHub issues.
+
+### 10. Full Mobile & Tablet Responsiveness
 - **Desktop (> 1080px)**: 3-column pro studio layout.
 - **Medium Screens (821px–1080px)**: Adaptive compact layout.
 - **Mobile & Tablet (<= 820px)**: Sleek segmented workspace navigation (`🎛 Controls`, `👁 Canvas`, `🎨 Layers`), giving each view 100% viewport width without horizontal scrolling.
@@ -117,33 +162,39 @@ vectorforge-ai/
 │   │   │   ├── preprocess.py            # Denoise, contrast, sharpen, bg-removal
 │   │   │   ├── quantize.py              # K-Means & Median-Cut color clustering
 │   │   │   ├── vectorize.py             # Tracing pipeline & SVG generator
-│   │   │   └── export.py                # SVG optimization & resvg PNG rendering
-│   │   ├── image_processing/            # Computer vision modules
+│   │   │   ├── export.py                # SVG optimization & resvg PNG rendering
+│   │   │   └── diagnostics.py           # Deep hardware & model telemetry route
+│   │   ├── bg_remover/                  # ISNet & BiRefNet matting + defringe choke
+│   │   ├── image_enhancer/              # Real-ESRGAN (x4v3 & x4plus) + 6-stage CV
+│   │   ├── image_processing/            # Computer vision analysis & quantization
 │   │   ├── vectorization/               # VTracer (Rust) & Contour (OpenCV)
 │   │   ├── export/                      # Scour SVG & resvg-py PNG exporters
 │   │   ├── core/                        # SessionManager & App Settings
 │   │   └── main.py                      # FastAPI App initialization & CORS
 │   └── tests/
-│       └── test_vectorforge.py          # Pytest suite (9/9 passing)
+│       └── test_vectorforge.py          # Pytest suite (21/21 passing)
 │
 ├── frontend/                            # React 19 + TypeScript + Vite
+│   ├── public/
+│   │   ├── documentation.html           # Comprehensive technical master guide
+│   │   └── diagnose.html                # Live telemetry & diagnostic dashboard
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── TopBar.tsx               # Upload, reset, export, and responsive controls
-│   │   │   ├── LeftPanel.tsx            # Preprocessing, quantization, and tracing sliders
-│   │   │   ├── PreviewCanvas.tsx        # 2000% zoom, pan, and split-view comparison
-│   │   │   ├── RightPanel.tsx           # Color palette, layer list, and SVG statistics
-│   │   │   ├── DropZone.tsx             # Drag-and-drop & clipboard paste zone
-│   │   │   └── StatusBar.tsx            # Dimensions, zoom %, paths, and engine status
+│   │   ├── components/                  # TopBar, Canvas, Left/Right panels
+│   │   ├── features/
+│   │   │   ├── bg_remover/              # Background Remover Studio Panel
+│   │   │   └── enhancer/                # Image Enhancer Studio Panel
 │   │   ├── store/appStore.ts            # Zustand global application state
-│   │   ├── api/client.ts                # Axios REST client
-│   │   └── index.css                    # Dark glassmorphism design system & media queries
+│   │   └── api/client.ts                # Axios REST client
 │   └── vite.config.ts                   # Vite config with backend proxy
 │
-├── docs/                                # Technical docs & screenshots
-├── samples/                             # Sample images for testing (PNG, WebP, JPG)
-├── CLAUDE.md                            # Comprehensive Developer & AI Assistant Guide
-├── BRAIN.md                             # Architectural memory & roadmap knowledge base
+├── scripts/
+│   └── download_pro_models.py           # Resumable multi-model downloader CLI
+├── documentation.html                   # Master documentation (root)
+├── diagnose.html                        # Live telemetry dashboard (root)
+├── docs/                                # Screenshots & doc replicas
+├── samples/                             # Test assets (logos, sketches, photos)
+├── CLAUDE.md                            # Complete Developer & AI Assistant Guide
+├── BRAIN.md                             # Architectural memory & decisions
 └── CHANGELOG.md                         # Release history
 ```
 
@@ -179,6 +230,36 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
+#### Optional: AI Model Pre-Download (One-Time)
+To avoid any network delay during live HTTP requests, you can pre-download the models offline using the built-in helper script:
+
+```powershell
+# Pre-download all models (BiRefNet ~972MB + RealESRGAN_x4plus ~67MB + ISNet ~178MB + Real-ESRGAN v3 ~4.8MB)
+python scripts/download_pro_models.py --all
+
+# Or pre-download individually:
+python scripts/download_pro_models.py --birefnet         # BiRefNet Ultra (~972MB)
+python scripts/download_pro_models.py --realesrgan-plus  # RealESRGAN_x4plus Ultra (~67MB)
+python scripts/download_pro_models.py --realesrgan       # Real-ESRGAN v3 Fast (~4.8MB)
+python scripts/download_pro_models.py --isnet            # ISNet Fast (~178.6MB)
+```
+
+Alternatively, you can pre-download them with one-line Python commands:
+- **RealESRGAN_x4plus Ultra Model (~67MB)**:
+  ```powershell
+  python scripts/download_pro_models.py --realesrgan-plus
+  ```
+- **BiRefNet Ultra Model (~972MB)**:
+  ```powershell
+  python -c "from rembg import new_session; new_session('birefnet-general'); print('BiRefNet cached successfully!')"
+  ```
+- **Real-ESRGAN v3 Fast Model (~4.8MB)**:
+  ```powershell
+  python -c "import urllib.request, pathlib; p = pathlib.Path.home() / '.cache' / 'realesrgan' / 'realesr-general-x4v3.onnx'; p.parent.mkdir(parents=True, exist_ok=True); urllib.request.urlretrieve('https://huggingface.co/Heliosoph/realesrgan-onnx/resolve/main/realesr-general-x4v3.onnx', str(p)); print('Real-ESRGAN Fast cached!')"
+  ```
+
+*(Note: If uncached, the server automatically degrades gracefully to Fast mode—`isnet-general-use` for Background Removal and `realesr-general-x4v3` / `Lanczos-4` for Image Enhancer—without blocking live requests).*
+
 ---
 
 ### Step 3: Set Up Frontend
@@ -212,14 +293,14 @@ npm run dev
 
 ## 🧪 Testing & Verification
 
-Vectorizer AI includes automated test suites covering all computer-vision pipelines, vectorization engines, and HTTP routes.
+Vectorizer AI includes automated test suites covering all computer-vision pipelines, neural models, vectorization engines, and HTTP routes.
 
 ```powershell
-# Run backend pytest suite (10 tests)
+# Run backend pytest suite (21/21 tests passing)
 python -m pytest backend/tests/test_vectorforge.py -v
 
-# Run full end-to-end HTTP pipeline test
-python tests/test_api_e2e.py
+# Inspect live telemetry & model cache verification
+curl http://127.0.0.1:8000/api/diagnostics
 
 # Build frontend production bundle
 cd frontend
@@ -233,11 +314,14 @@ npm run build
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Server health check & version info |
+| `GET` | `/api/diagnostics` | Full system health, ONNX providers, hardware RAM, and 4-model cache verification |
 | `POST` | `/api/upload` | Multipart upload (PNG, JPG, BMP, WebP) with dimension validation |
 | `POST` | `/api/analyze` | Returns edge density, color variance, and recommended mode |
 | `POST` | `/api/preprocess` | Applies denoise, contrast, sharpen, or bg-removal |
 | `POST` | `/api/quantize` | Reduces color palette using K-Means or Median-Cut |
 | `POST` | `/api/vectorize` | Executes VTracer / Contour tracing and returns SVG URL + stats |
+| `POST` | `/api/remove-bg` | Studio AI background removal (`quality`: "fast" [isnet] \| "ultra" [birefnet], defringe choke, feather, color decontamination) |
+| `POST` | `/api/enhance` | Studio AI super-resolution (`quality`: "fast" [x4v3] \| "ultra" [x4plus], scale, 6-stage classical enhancement) |
 | `GET` | `/api/svg/{session_id}` | Serves the generated SVG file directly |
 | `POST` | `/api/export/svg` | Exports optimized SVG with `scour` |
 | `POST` | `/api/export/png` | Renders high-res raster PNG via `resvg` at 1×, 2×, 4×, 8× |
@@ -252,10 +336,14 @@ npm run build
 - [x] Split-view comparison slider with 2000% zoom
 - [x] Mobile & tablet responsive workspace navigation
 - [x] High-resolution multi-scale PNG export with `resvg-py`
+- [x] **AI Background Removal Studio**: Dual-tier Fast (`isnet-general-use`) & Ultra Pro (`birefnet-general`)
+- [x] **Edge Halo Choke & Physical Alpha-Unmixing Color Decontamination**: Mathematical edge fringe eradication
+- [x] **AI Image Enhancer Studio**: Dual-tier Fast (`realesr-general-x4v3`) & Ultra Pro (`RealESRGAN_x4plus`) + 6-stage CV pipeline
+- [x] **Live System & Model Diagnostics**: Interactive `diagnose.html` dashboard & `/api/diagnostics` telemetry
+- [x] **Resumable Multi-Model Downloader**: CLI script with HTTP Range resumption (`download_pro_models.py`)
 - [ ] **Batch Processing Mode**: Queue multiple images for bulk vectorization
 - [ ] **Desktop App Packaging**: Standalone offline executable using Tauri or Electron
 - [ ] **Direct EPS & PDF Vector Export**: Export directly to Adobe Illustrator EPS and print-ready PDF vectors
-- [ ] **AI-Assisted Line-Art Inpainter**: Deep-learning edge reconnect for cracked line drawings
 - [ ] **WebAssembly In-Browser Tracer**: Client-side WASM engine fallback for serverless hosting
 
 ---

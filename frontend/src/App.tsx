@@ -12,7 +12,7 @@ import { uploadImage, analyzeImage, getSessionStatus } from './api/client'
 
 function ProcessingOverlay() {
   const { stage } = useAppStore()
-  const working = ['uploading','analyzing','preprocessing','quantizing','vectorizing'].includes(stage)
+  const working = ['uploading','analyzing','preprocessing','quantizing','vectorizing','enhancing','removing_bg'].includes(stage)
   if (!working) return null
 
   const labels: Record<string, [string, string]> = {
@@ -21,6 +21,8 @@ function ProcessingOverlay() {
     preprocessing: ['Preprocessing', 'Applying filters and adjustments…'],
     quantizing:    ['Quantizing', 'Reducing color palette with k-means…'],
     vectorizing:   ['Vectorizing', 'Tracing raster to vector paths…'],
+    enhancing:     ['Enhancing Image', 'Upscaling, sharpening, and improving clarity…'],
+    removing_bg:   ['Removing Background', 'Isolating foreground and defringing edges…'],
   }
 
   const [title, subtitle] = labels[stage] ?? ['Processing', 'Please wait…']
@@ -71,10 +73,13 @@ function App() {
             try {
               const info = await uploadImage(file)
               setImageInfo(info)
-              setStage('analyzing')
-              const analysis = await analyzeImage(info.session_id)
-              setAnalysisResult(analysis)
               setStage('idle')
+              try {
+                const analysis = await analyzeImage(info.session_id)
+                setAnalysisResult(analysis)
+              } catch (analysisErr) {
+                console.warn('Auto analysis note:', analysisErr)
+              }
             } catch (err: any) {
               setStage('error', err?.response?.data?.detail || String(err))
             }

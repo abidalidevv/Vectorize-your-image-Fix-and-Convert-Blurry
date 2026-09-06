@@ -27,6 +27,8 @@ class Session:
         self.original_path: Optional[Path] = None
         self.preprocessed_path: Optional[Path] = None
         self.quantized_path: Optional[Path] = None
+        self.enhanced_path: Optional[Path] = None
+        self.bg_removed_path: Optional[Path] = None
         self.svg_path: Optional[Path] = None
 
         # Metadata

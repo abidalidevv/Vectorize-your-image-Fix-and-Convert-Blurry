@@ -11,7 +11,8 @@ import cv2
 import vtracer
 
 from vectorization.base import AbstractTracer
-from image_processing.line_detector import enhance_fine_lines, detect_line_art
+from image_processing.line_detector import enhance_fine_lines, enhance_fine_lines_sdf, detect_line_art
+from image_processing.primitive_detector import detect_primitives, build_primitive_svg
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ class VTracerEngine(AbstractTracer):
                     trace_image_path = enhanced_path
                     hierarchical = "cutout"
                     filter_speckle = min(filter_speckle, 1)
-                    length_threshold = min(length_threshold, 2.0)
+                    length_threshold = min(length_threshold, 4.0)
                     used_scale = 2
                     logger.info(f"VTracer fine line mode active for {image_path.name}")
 
@@ -192,6 +193,22 @@ class VTracerEngine(AbstractTracer):
             orig_h, orig_w = orig_img.shape[:2] if orig_img is not None else (300, 300)
             has_alpha = orig_img is not None and len(orig_img.shape) == 3 and orig_img.shape[2] == 4
 
+            use_primitives = params.get("use_primitive_detection", True)
+            if use_primitives:
+                try:
+                    primitives = detect_primitives(image_path)
+                    if primitives["coverage"] >= 0.85 and (primitives["circles"] or primitives["lines"]):
+                        svg_content = build_primitive_svg(primitives, orig_w, orig_h, has_alpha)
+                        output_svg_path.write_text(svg_content, encoding="utf-8")
+                        svg_size = output_svg_path.stat().st_size
+                        logger.info(
+                            f"Primitive detection used: {len(primitives['circles'])} circles, "
+                            f"{len(primitives['lines'])} lines, coverage={primitives['coverage']:.2f}"
+                        )
+                        return {"success": True, "engine": f"{self.name}/Primitive", "error": None, "svg_size": svg_size}
+                except Exception as e:
+                    logger.warning(f"Primitive detection failed, falling back to VTracer trace: {e}")
+
             # Fine line detail preservation
             trace_image_path = image_path
             temp_enhanced_path = image_path.parent / f"{image_path.stem}_fine_enhanced_bw.png"
@@ -202,21 +219,24 @@ class VTracerEngine(AbstractTracer):
 
             if was_enhanced:
                 trace_image_path = enhanced_path
-                colormode = "binary"
+                colormode = "color"
                 hierarchical = "cutout"
                 filter_speckle = 0
-                length_threshold = float(params.get("length_threshold", 9.0))
+                length_threshold = float(params.get("length_threshold", 4.0))
+                corner_threshold = int(params.get("corner_threshold", 60))
                 used_scale = scale_factor
+                color_precision = 2
+                layer_difference = 16
             else:
                 colormode = "color"
                 hierarchical = "cutout"
                 filter_speckle = int(params.get("filter_speckle", 0))
                 length_threshold = float(params.get("length_threshold", preset["length_threshold"]))
+                corner_threshold = int(params.get("corner_threshold", 60))
                 used_scale = 1
+                color_precision = 2
+                layer_difference = 16
 
-            color_precision = 2
-            layer_difference = 16
-            corner_threshold = int(params.get("corner_threshold", 75))
             max_iterations = int(params.get("max_iterations", preset["max_iterations"]))
             splice_threshold = int(params.get("splice_threshold", preset["splice_threshold"]))
             path_precision = int(preset.get("path_precision", 6))

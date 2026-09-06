@@ -110,9 +110,10 @@ def _pick_source(session, params: VectorizeParams) -> Path | None:
         if session.quantized_path and session.quantized_path.exists():
             return session.quantized_path
         return session.preprocessed_path or session.original_path
-    # auto: prefer original unless the user is in logo mode AND explicitly quantized
-    if params.image_mode == "logo" and session.quantized_path and session.quantized_path.exists():
-        return session.quantized_path
-    if session.preprocessed_path and session.preprocessed_path.exists():
-        return session.preprocessed_path
+    if stage == "auto":
+        if session.quantized_path and session.quantized_path.exists():
+            return session.quantized_path
+        if session.preprocessed_path and session.preprocessed_path.exists():
+            return session.preprocessed_path
+        return session.original_path
     return session.original_path

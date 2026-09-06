@@ -240,3 +240,311 @@ def test_color_vectorization_circle_and_junction_integrity():
     )
     assert dark_crossing == 0, f"Found {dark_crossing} black wedge pixels at line crossing!"
 
+
+def test_bw_line_art_path_count_is_low():
+    """Regression guard: concentric circle line art must NOT fragment into hundreds of paths."""
+    from vectorization.vtracer_engine import VTracerEngine
+    from utils.svg_optimizer import validate_svg
+    engine = VTracerEngine()
+    src = SAMPLES_DIR / "test_bw.png"
+    out = Path(__file__).parent / "_tmp_path_count_check.svg"
+    result = engine.trace_bw(src, out, {})
+    assert result["success"] is True
+    svg = out.read_text(encoding="utf-8")
+    stats = validate_svg(svg)["stats"]
+    path_count = stats.get("path_count", 9999)
+    out.unlink(missing_ok=True)
+    assert path_count < 50, f"Expected a low, connected path count, got {path_count} (fragmentation regression)"
+
+
+def test_primitive_detection_produces_true_circles():
+    """Circle/crosshair line art should be traced as real <circle>/<line> SVG primitives, not fragmented paths."""
+    from vectorization.vtracer_engine import VTracerEngine
+    engine = VTracerEngine()
+    src = SAMPLES_DIR / "test_bw.png"
+    out = Path(__file__).parent / "_tmp_primitive_check.svg"
+    result = engine.trace_bw(src, out, {})
+    assert result["success"] is True
+    svg = out.read_text(encoding="utf-8")
+    out.unlink(missing_ok=True)
+    assert "<circle" in svg, "Expected true <circle> SVG elements for circle test image"
+    circle_count = svg.count("<circle")
+    assert circle_count >= 4, f"Expected at least 4 detected circles, found {circle_count}"
+
+
+def test_image_enhancer_upscaling_and_clahe():
+    """Verify Image Enhancer can upscale 2x and apply CLAHE/sharpening."""
+    from image_processing.enhancer import apply_enhancement
+    src = SAMPLES_DIR / "test_logo.png"
+    out = TMP_DIR / "test_enhanced.png"
+    changes, w, h = apply_enhancement(src, {
+        "scale": 2,
+        "sharpen_strength": 1.0,
+        "clahe_enabled": True,
+        "contrast": 1.1,
+    }, out)
+    assert out.exists()
+    assert w > 0 and h > 0
+    assert any("Super-Resolution 2×" in c for c in changes)
+    assert any("Adaptive Tone" in c for c in changes)
+    out.unlink(missing_ok=True)
+
+
+def test_bg_remover_cutout_and_replacement():
+    """Verify Background Remover can isolate foreground and composite over color."""
+    from image_processing.bg_remover import remove_image_background
+    from PIL import Image
+    src = SAMPLES_DIR / "test_logo.png"
+    out_trans = TMP_DIR / "test_cutout_trans.png"
+    changes_trans, w1, h1 = remove_image_background(src, {
+        "engine": "color",
+        "bg_type": "transparent",
+        "feather_radius": 1.0,
+        "defringe_choke": 1,
+    }, out_trans)
+    assert out_trans.exists()
+    with Image.open(out_trans) as img_t:
+        assert img_t.mode == "RGBA"
+    out_trans.unlink(missing_ok=True)
+
+    out_solid = TMP_DIR / "test_cutout_solid.png"
+    changes_solid, w2, h2 = remove_image_background(src, {
+        "engine": "color",
+        "bg_type": "color",
+        "bg_color": "#ff0000",
+    }, out_solid)
+    assert out_solid.exists()
+    assert any("Replaced background" in c for c in changes_solid)
+    out_solid.unlink(missing_ok=True)
+
+
+def test_bg_remover_edge_decontamination_and_fringe_reduction():
+    """
+    Verify Part 1 edge decontamination & defringe on:
+    - Light subject on light background
+    - Dark subject on light background
+    Confirms color unmixing mathematically reconstructs true foreground and defringe chokes alpha.
+    """
+    import numpy as np
+    from bg_remover.engine import _decontaminate_color, _estimate_background_color
+    import cv2
+
+    # Case 1: Dark subject (RGB [20, 20, 20]) on white background (RGB [250, 250, 250])
+    bg_color = np.array([250.0, 250.0, 250.0], dtype=np.float32)
+    dark_fg = np.array([20.0, 20.0, 20.0], dtype=np.float32)
+    # Edge pixel with alpha=128 (~0.502) blended with background:
+    alpha_val = 128
+    alpha_norm = alpha_val / 255.0
+    observed_dark = (dark_fg * alpha_norm + bg_color * (1.0 - alpha_norm)).astype(np.uint8)
+    
+    # Construct RGBA test patch
+    patch_dark = np.zeros((4, 4, 4), dtype=np.uint8)
+    patch_dark[:, :, :3] = observed_dark
+    patch_dark[:, :, 3] = alpha_val
+
+    decontaminated_dark = _decontaminate_color(patch_dark, bg_color=bg_color)
+    recovered_dark = decontaminated_dark[1, 1, :3].astype(float)
+    # Recovered dark color should be very close to original dark_fg [20, 20, 20], NOT observed_dark (~135)
+    assert np.all(np.abs(recovered_dark - dark_fg) <= 2.0), f"Dark FG decontamination error: {recovered_dark} vs {dark_fg}"
+
+    # Case 2: Light subject (RGB [220, 200, 180]) on white background (RGB [255, 255, 255])
+    light_fg = np.array([220.0, 200.0, 180.0], dtype=np.float32)
+    observed_light = (light_fg * alpha_norm + bg_color * (1.0 - alpha_norm)).astype(np.uint8)
+    patch_light = np.zeros((4, 4, 4), dtype=np.uint8)
+    patch_light[:, :, :3] = observed_light
+    patch_light[:, :, 3] = alpha_val
+
+    decontaminated_light = _decontaminate_color(patch_light, bg_color=bg_color)
+    recovered_light = decontaminated_light[1, 1, :3].astype(float)
+    assert np.all(np.abs(recovered_light - light_fg) <= 2.0), f"Light FG decontamination error: {recovered_light} vs {light_fg}"
+
+
+def test_bg_remover_fast_mode():
+    """Verify Fast mode remove-bg produces a valid RGBA image with transparency."""
+    from bg_remover.engine import remove_image_background
+    from PIL import Image
+    import numpy as np
+
+    src = SAMPLES_DIR / "test_logo.png"
+    out_fast = TMP_DIR / "test_fast_cutout.png"
+    changes, w, h = remove_image_background(src, {
+        "quality": "fast",
+        "defringe_choke": 1,
+        "feather_radius": 1.0,
+    }, out_fast)
+
+    assert out_fast.exists()
+    assert w > 0 and h > 0
+    with Image.open(out_fast) as img:
+        assert img.mode == "RGBA"
+        # Must have transparent pixels
+        arr = np.array(img)
+        assert np.any(arr[:, :, 3] < 255)
+    out_fast.unlink(missing_ok=True)
+
+
+def test_bg_remover_ultra_fallback_when_uncached(monkeypatch):
+    """Verify Ultra mode remove-bg gracefully falls back to fast mode when BiRefNet is uncached."""
+    import bg_remover.engine
+    from bg_remover.engine import remove_image_background
+    from PIL import Image
+
+    # Mock _is_birefnet_cached to False
+    monkeypatch.setattr(bg_remover.engine, "_is_birefnet_cached", lambda: False)
+
+    src = SAMPLES_DIR / "test_logo.png"
+    out_ultra = TMP_DIR / "test_ultra_fallback.png"
+    changes, w, h = remove_image_background(src, {
+        "quality": "ultra",
+        "defringe_choke": 1,
+        "feather_radius": 1.0,
+    }, out_ultra)
+
+    assert out_ultra.exists()
+    assert w > 0 and h > 0
+    with Image.open(out_ultra) as img:
+        assert img.mode == "RGBA"
+    out_ultra.unlink(missing_ok=True)
+
+
+def test_image_enhancer_fast_mode():
+    """Verify Fast mode image enhancer applies lightweight AI super-resolution (realesr-general-x4v3)."""
+    from image_enhancer.engine import apply_enhancement
+    from PIL import Image
+
+    src = SAMPLES_DIR / "test_logo.png"
+    out_fast = TMP_DIR / "test_enhancer_fast.png"
+    with Image.open(src) as orig:
+        orig_w, orig_h = orig.size
+
+    changes, w, h = apply_enhancement(src, {
+        "quality": "fast",
+        "scale": 2,
+        "sharpen_strength": 0.8,
+        "clahe_enabled": True,
+    }, out_fast)
+
+    assert out_fast.exists()
+    assert w == orig_w * 2
+    assert h == orig_h * 2
+    assert any("realesr-general-x4v3 Fast" in c for c in changes)
+    out_fast.unlink(missing_ok=True)
+
+
+def test_image_enhancer_ultra_fallback_when_uncached(monkeypatch):
+    """Verify Ultra mode image enhancer gracefully falls back to Fast tier when RealESRGAN_x4plus is uncached."""
+    import image_enhancer.engine
+    from image_enhancer.engine import apply_enhancement
+    from PIL import Image
+
+    # Simulate Ultra model weights missing
+    monkeypatch.setattr(image_enhancer.engine, "_is_realesrgan_ultra_cached", lambda: False)
+
+    src = SAMPLES_DIR / "test_logo.png"
+    out_fallback = TMP_DIR / "test_enhancer_ultra_fallback.png"
+    with Image.open(src) as orig:
+        orig_w, orig_h = orig.size
+
+    changes, w, h = apply_enhancement(src, {
+        "quality": "ultra",
+        "scale": 2,
+    }, out_fallback)
+
+    assert out_fallback.exists()
+    assert w == orig_w * 2
+    assert h == orig_h * 2
+    assert any("fallback" in c.lower() for c in changes)
+    out_fallback.unlink(missing_ok=True)
+
+
+def test_system_diagnostics_endpoint():
+    """Verify the /api/diagnostics endpoint returns valid system, hardware, and model metadata."""
+    import asyncio
+    from api.routes.diagnostics import get_system_diagnostics
+
+    res = asyncio.run(get_system_diagnostics())
+    assert res["status"] == "ok"
+    assert res["service"] == "VectorForge AI"
+    assert "platform" in res
+    assert "onnx_runtime" in res
+    assert "models" in res
+    assert "bg_remover" in res["models"]
+    assert "image_enhancer" in res["models"]
+    assert res["models"]["bg_remover"]["fast"]["model_name"] == "isnet-general-use"
+    assert res["models"]["bg_remover"]["ultra"]["model_name"] == "birefnet-general"
+    assert res["models"]["image_enhancer"]["fast"]["model_name"] == "realesr-general-x4v3"
+    assert res["models"]["image_enhancer"]["ultra"]["model_name"] == "RealESRGAN_x4plus"
+    assert res["models"]["face_restorer"]["gfpgan"]["model_name"] == "GFPGANv1.4"
+    assert res["models"]["face_restorer"]["detector"]["model_name"] == "YuNet"
+    assert res["models"]["magic_eraser"]["lama"]["model_name"] == "LaMa-ONNX"
+    assert len(res["models"]["image_enhancer"]["pipeline_stages"]) >= 6
+
+
+def test_magic_eraser_inpaint_synthetic():
+    """Verify Magic Eraser inpainting removes masked objects and fills smoothly."""
+    import base64
+    import io
+    import numpy as np
+    from PIL import Image, ImageDraw
+    from magic_eraser.engine import inpaint_image
+
+    # Create a synthetic image with a bright red square in the center
+    img = Image.new("RGB", (64, 64), color=(200, 200, 200))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([20, 20, 44, 44], fill=(255, 0, 0))
+    src_path = TMP_DIR / "test_eraser_input.png"
+    img.save(src_path)
+
+    # Create a mask covering the red square
+    mask = Image.new("L", (64, 64), color=0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rectangle([18, 18, 46, 46], fill=255)
+    buf = io.BytesIO()
+    mask.save(buf, format="PNG")
+    mask_b64 = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    out_path = TMP_DIR / "test_eraser_output.png"
+    changes, w, h = inpaint_image(
+        src_path,
+        mask_b64,
+        out_path,
+        quality="fast",
+        dilate_radius=2,
+        method="auto",
+    )
+
+    assert out_path.exists()
+    assert w == 64 and h == 64
+    assert len(changes) > 0
+
+    # Verify that red pixels in the center have been replaced/inpainted
+    with Image.open(out_path) as res_img:
+        arr = np.array(res_img)
+        center_color = arr[32, 32]
+        # Red channel shouldn't dominate like pure (255, 0, 0)
+        assert not (center_color[0] > 200 and center_color[1] < 50 and center_color[2] < 50)
+
+    src_path.unlink(missing_ok=True)
+    out_path.unlink(missing_ok=True)
+
+
+def test_face_restorer_when_no_faces():
+    """Verify Face Restorer runs gracefully when no faces are detected in the image."""
+    from PIL import Image
+    import numpy as np
+    from image_enhancer.face_restorer import restore_faces
+
+    src = SAMPLES_DIR / "test_logo.png"
+    with Image.open(src) as img:
+        arr = np.array(img.convert("RGB"))
+
+    # Running face restoration on a logo should not crash and should return unchanged image
+    restored, count = restore_faces(arr, fidelity=0.8)
+    assert restored.shape == arr.shape
+    assert count == 0
+
+
+
+
+
+

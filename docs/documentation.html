@@ -475,6 +475,14 @@
             <div class="nav-item" data-target="engines">⚙️ Dual Vector Engines</div>
             <div class="nav-item" data-target="analysis">🧠 Smart Pre-Analysis</div>
             <div class="nav-item" data-target="preprocessing">🎛️ Preprocessing & Colors</div>
+            <div class="nav-item" data-target="image-guide">🎯 Image-Type Settings Guide</div>
+            <div class="nav-item" data-target="settings-reference">⚙️ Settings & Sliders Reference</div>
+            <div class="nav-item" data-target="bg-remover">🖼️ Background Remover Studio</div>
+            <div class="nav-item" data-target="image-enhancer">✨ Image Enhancer Studio</div>
+            <div class="nav-item" data-target="face-restoration">👤 Face Restoration (GFPGAN)</div>
+            <div class="nav-item" data-target="magic-eraser">🪄 Magic Eraser Studio (LaMa)</div>
+            <div class="nav-item" data-target="diagnostics">🩺 Live Diagnostics Dashboard</div>
+            <div class="nav-item" data-target="pro-models">📦 Pro Models Pre-Download</div>
             <div class="nav-item" data-target="canvas">🔬 Deep Zoom & Split View</div>
             <div class="nav-item" data-target="responsive">📱 Responsive Studio</div>
             <div class="nav-item" data-target="installation">💻 Installation & Setup</div>
@@ -485,6 +493,10 @@
         </nav>
 
         <div class="sidebar-footer">
+            <a href="diagnose.html" target="_blank" rel="noopener" class="sidebar-link-btn" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;">
+                <span>🩺 System Diagnostics</span>
+                <strong>diagnose.html</strong>
+            </a>
             <a href="https://abidalidev.com" target="_blank" rel="noopener" class="sidebar-link-btn">
                 <span>🌐 Portfolio</span>
                 <strong>abidalidev.com</strong>
@@ -504,7 +516,9 @@
                 Production-grade, 100% local-first raster-to-vector web application. Converts blurry logos, icons, illustrations, and line art into crisp, infinitely scalable Bézier curve SVG paths without cloud services or subscriptions.
             </p>
             <div class="badge-bar">
-                <span class="badge accent">Version 1.0.1</span>
+                <span class="badge accent">Version 1.2.0 (Studio Suite)</span>
+                <span class="badge success">All 23 Tests Passing (100%)</span>
+                <a href="diagnose.html" target="_blank" class="badge success">🩺 Live Diagnostics (7 Models)</a>
                 <span class="badge success">100% Local-First (Windows)</span>
                 <a href="https://abidalidev.com" target="_blank" class="badge">Author: Abid Ali (abidalidev.com)</a>
                 <span class="badge">VTracer Rust Engine</span>
@@ -714,6 +728,585 @@
             </div>
         </section>
 
+        <!-- ── Section: Optimal Settings Guide by Image Type ── -->
+        <section id="image-guide" class="card">
+            <h2>🎯 Optimal Settings Guide by Image Type (Kaunsi Setting Kis Image Ke Liye Best Hai?)</h2>
+            <p>
+                Har image ka structure mukhtalif hota hai. Ek flat-color logo ko vectorize karne ke rules photo ya pencil sketch se mukammal alag hote hain. Niche diye gaye matrix aur guides ko follow karein taake pehli koshish mein hi <strong>100% perfect, sharp aur clean vector</strong> mile:
+            </p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Image Category</th>
+                            <th>Target Image Types</th>
+                            <th>Recommended Mode</th>
+                            <th>Speckle Filter</th>
+                            <th>Stacking Hierarchy</th>
+                            <th>Recommended Preset</th>
+                            <th>Key Optimization Rule</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Flat-Color Logos & Icons</strong></td>
+                            <td>Logos, app icons, badges, typography, stickers (e.g. <code>test_logo.png</code>)</td>
+                            <td><span class="badge accent">LOGO / CLIPART</span></td>
+                            <td><strong>0</strong> (Crucial!)</td>
+                            <td><strong>Cutout</strong></td>
+                            <td><span class="badge success">High / Ultra</span></td>
+                            <td>Speckle Filter ko <strong>0</strong> par rakhein taake 1-3px patli borders aur outlines delete na hon. Cutout hierarchy se colors dark lines ke peeche bleed nahi karte.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Geometric & B&W Line Art</strong></td>
+                            <td>Concentric circles, crosshairs, targets, CAD blueprints (e.g. <code>test_bw.png</code>)</td>
+                            <td><span class="badge accent">BLACK & WHITE</span></td>
+                            <td><strong>0</strong></td>
+                            <td>Auto / Primitive</td>
+                            <td><span class="badge success">Balanced / High</span></td>
+                            <td><strong>Primitive Detection</strong> automatically activates: Emits true mathematical <code>&lt;circle&gt;</code> and <code>&lt;line&gt;</code> primitives for infinite sharpness even at 10,000% zoom.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Multi-Color Shaded Graphics</strong></td>
+                            <td>Complex vector illustrations with abutting shapes (e.g. <code>test_complex.png</code>, <code>test_multicolor.png</code>)</td>
+                            <td><span class="badge accent">AUTO / LOGO</span></td>
+                            <td><strong>1</strong></td>
+                            <td><strong>Stacked</strong></td>
+                            <td><span class="badge success">High</span></td>
+                            <td>Stacked hierarchy use karein taake adjacent curves ke darmian transparent hairline dararein (seam holes) bilkul na banen (0 seam holes guaranteed).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hand-Drawn Sketches</strong></td>
+                            <td>Pencil drawings, pen doodles, scanned notebook sketches, stamps</td>
+                            <td><span class="badge accent">SKETCH</span></td>
+                            <td><strong>1 – 2</strong></td>
+                            <td>Stacked / Cutout</td>
+                            <td><span class="badge success">High</span></td>
+                            <td>Preprocessing tab mein <strong>CLAHE Contrast</strong> ko 1.3 – 1.6 karein aur <strong>Noise Reduction</strong> (2.0) on karein taake kagaz ka texture saaf ho jaye aur faint pencil lines dark ho jayen.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Photos & Continuous Art</strong></td>
+                            <td>Portraits, landscape photos, wallpapers, complex gradients</td>
+                            <td><span class="badge accent">PHOTO</span></td>
+                            <td><strong>2 – 4</strong></td>
+                            <td>Stacked</td>
+                            <td><span class="badge success">Balanced / High</span></td>
+                            <td>Pehle <strong>Color Quantization</strong> tab mein ja kar colors ko <strong>16 ya 24</strong> par reduce karein. Is se continuous gradient ek stylish, clean vector poster art mein convert ho jata hai.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>🔍 Deep-Dive: Image-Specific Setup Examples</h3>
+
+            <!-- Logo Guide Card -->
+            <div class="card" style="background: var(--bg-code); margin-top: 16px; border-left: 4px solid var(--accent-primary);">
+                <h3 style="margin-top:0; color: #fff;">1. Flat-Color Logo with Outlines & Borders (Example: <code>test_logo.png</code>)</h3>
+                <p>
+                    <strong>Common Problem:</strong> Agar default settings use ki jayen toh black line ke neeche se yellow line leak ho sakti hai aur triangle ke gird 2-pixel patla brown border gayab ho sakta hai.
+                </p>
+                <ul>
+                    <li><strong>Image Mode:</strong> <code>LOGO / CLIPART</code></li>
+                    <li><strong>Quality Preset:</strong> <code>High</code> ya <code>Ultra</code></li>
+                    <li><strong>Speckle Filter:</strong> <code>0</code> <em>(Important: Value &gt; 0 karne se 2-3px patli borders 'noise' samajh kar delete ho jati hain!)</em></li>
+                    <li><strong>Curve Fitting:</strong> <code>Spline</code></li>
+                    <li><strong>Result:</strong> Zero yellow bleed under black line, 100% brown border intact, razor-sharp vector corners.</li>
+                </ul>
+                <div class="alert-box alert-success" style="margin: 8px 0 0 0;">
+                    <div>💡</div>
+                    <div><strong>One-Click Pro Tip:</strong> Image upload hone par left panel mein diye gaye <strong>"⚡ Use Recommended Settings (LOGO)"</strong> button par click karein — tamam behtareen settings 1 second mein apply ho jayengi!</div>
+                </div>
+            </div>
+
+            <!-- B&W Geometric Guide Card -->
+            <div class="card" style="background: var(--bg-code); margin-top: 16px; border-left: 4px solid var(--success);">
+                <h3 style="margin-top:0; color: #fff;">2. Geometric Circles, Crosshairs & Line Art (Example: <code>test_bw.png</code>)</h3>
+                <p>
+                    <strong>Common Problem:</strong> Standard raster vectorizers circles ko chhotay chhotay Bézier splines mein tortay hain, jis ki wajah se 1700% zoom par circle stepped/jagged (teeth) lagta hai.
+                </p>
+                <ul>
+                    <li><strong>Image Mode:</strong> <code>Black & White</code> (ya <code>AUTO</code>)</li>
+                    <li><strong>Quality Preset:</strong> <code>Balanced</code> ya <code>High</code></li>
+                    <li><strong>Under the Hood:</strong> VectorForge AI ka <strong>Primitive Detector</strong> automatically trigger hota hai aur raster curves ke bajaye asli <code>&lt;circle cx=".." cy=".." r=".."/&gt;</code> emit karta hai.</li>
+                    <li><strong>Result:</strong> Infinite mathematical sharpness at any zoom level (100% se 20,000% zoom tak bilkul smooth gol circle).</li>
+                </ul>
+            </div>
+
+            <!-- Complex Flat Art Guide Card -->
+            <div class="card" style="background: var(--bg-code); margin-top: 16px; border-left: 4px solid var(--warning);">
+                <h3 style="margin-top:0; color: #fff;">3. Complex Graphic / Multi-Color Sticker (Example: <code>test_complex.png</code>)</h3>
+                <p>
+                    <strong>Common Problem:</strong> Agar shapes ko cutout tor par alag alag banaya jaye toh browsers unke darmian 1-pixel ki safeed/transparent dararein (anti-aliasing seam gaps) dikha dete hain.
+                </p>
+                <ul>
+                    <li><strong>Image Mode:</strong> <code>AUTO</code> ya <code>LOGO</code></li>
+                    <li><strong>Stacking Hierarchy:</strong> <code>Stacked</code> (Layers overlap gracefully, creating 0 transparent seam gaps)</li>
+                    <li><strong>Quality Preset:</strong> <code>High</code> (Color Precision: 7, Layer Difference: 12)</li>
+                    <li><strong>Result:</strong> 0 seam holes, perfectly connected color regions, smooth circle disks without black wedges.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ── Section: Vectorization Settings Reference ── -->
+        <section id="settings-reference" class="card">
+            <h2>⚙️ Complete Vectorization Settings & Sliders Reference</h2>
+            <p>
+                Har slider aur dropdown option backend par VTracer Rust engine ke math parameters ko directly control karta hai. Yahan har setting ki mukammal tafseel di gayi hai:
+            </p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter Name</th>
+                            <th>Values / Range</th>
+                            <th>Default</th>
+                            <th>Engine Functionality & Real Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Image Mode</strong></td>
+                            <td><code>auto</code>, <code>logo</code>, <code>photo</code>, <code>sketch</code>, <code>bw</code></td>
+                            <td><code>auto</code></td>
+                            <td>Engine selector pipeline ko route karta hai. <code>bw</code> primitive geometric detection chalata hai, <code>logo</code> cutout hierarchy use karta hai, <code>sketch</code> line-contrast preservation chalata hai.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Quality Preset</strong></td>
+                            <td><code>fast</code>, <code>balanced</code>, <code>high</code>, <code>ultra</code></td>
+                            <td><code>high</code></td>
+                            <td>VTracer ke tamam mathematical thresholds (iterations, length threshold, path precision) ko ek sath pre-configure karta hai.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Speckle Filter (filter_speckle)</strong></td>
+                            <td><code>0 – 64</code> pixels</td>
+                            <td><code>1</code> (Logo mein <code>0</code>)</td>
+                            <td>
+                                <strong>Most Important Setting for Outlines:</strong>
+                                Is value se chhotay area wale patches ko VTracer "noise" samajh kar ura deta hai.<br>
+                                • <code>0</code>: 1-pixel aur 2-pixel patli borders, delicate text, aur thin outlines 100% mehfooz rehti hain.<br>
+                                • <code>1 – 4</code>: JPEG artifacts aur pixel noise ko saaf karta hai (photos aur sketches ke liye best).
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Stacking Hierarchy (hierarchical)</strong></td>
+                            <td><code>stacked</code> | <code>cutout</code></td>
+                            <td><code>stacked</code> (Logo mein <code>cutout</code>)</td>
+                            <td>
+                                • <strong>Cutout:</strong> Har color shape ek independent puzzle piece banti hai. Colors ek doosre ke peeche bleed nahi hote (Logos aur icons ke liye zaroori).<br>
+                                • <strong>Stacked:</strong> Shapes ek doosre ke upar layer-by-layer draw hoti hain. Anti-aliasing hairline gaps ko rokti hai (Illustrations ke liye best).
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Curve Fitting (mode)</strong></td>
+                            <td><code>spline</code> | <code>polygon</code> | <code>none</code></td>
+                            <td><code>spline</code></td>
+                            <td>
+                                • <strong>Spline:</strong> Cubic Bézier curves (smooth, professional vector look).<br>
+                                • <strong>Polygon:</strong> Straight lines aur angled segments (chunky/retro/origami style).<br>
+                                • <strong>None:</strong> Raw pixel contour stepping.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Color Precision</strong></td>
+                            <td><code>1 – 8</code></td>
+                            <td><code>7</code></td>
+                            <td>VTracer color space resolution. <code>8</code> par har subtle color shade accurate rehta hai; low values similar colors ko merge kar deti hain.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Layer Difference</strong></td>
+                            <td><code>2 – 32</code></td>
+                            <td><code>12</code></td>
+                            <td>Do color layers ke darmian minimum Euclidean color distance. Kam value subtle gradient steps banati hai; bari value image ko bold solid blocks mein simplify karti hai.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Corner Threshold</strong></td>
+                            <td><code>0 – 180°</code></td>
+                            <td><code>60°</code></td>
+                            <td>Jab do segments ka angle is value se kam ho, VTracer wahan sharp corner banata hai; agar angle zyada ho toh usko smooth curve mein turn karta hai.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Length Threshold</strong></td>
+                            <td><code>1.0 – 10.0</code></td>
+                            <td><code>2.0</code></td>
+                            <td>Bézier segment ki minimum length. Chhoti value fine details capture karti hai; bari value paths ko clean aur compact banati hai.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Geometric Primitives</strong></td>
+                            <td><code>Enabled (Auto)</code></td>
+                            <td><code>True</code></td>
+                            <td>B&W line art mein Hough Transform se asli <code>&lt;circle&gt;</code> aur <code>&lt;line&gt;</code> detect kar ke emit karta hai (Infinite optical zoom fidelity).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>⚠️ Troubleshooting & Frequently Asked Questions (FAQ)</h3>
+            <div class="card" style="background: var(--bg-code); margin-top: 14px;">
+                <h4 style="color: #fff; margin-bottom: 8px;">Q1: Black line ke neeche ajeeb si yellow ya colored line kyun dikhai de rahi hai?</h4>
+                <p>
+                    <strong>Wajah:</strong> Default <code>stacked</code> mode mein light color dark line ke peeche phail jata hai aur spline overshoot ki wajah se 1 pixel bahar nikal aata hai.<br>
+                    <strong>Hal:</strong> Image Mode ko <strong><code>LOGO / CLIPART</code></strong> set karein ya left panel se <strong>"⚡ Use Recommended Settings"</strong> dabayein (yeh automatically <code>cutout</code> mode lagata hai jahan koi color bleed nahi hota).
+                </p>
+
+                <h4 style="color: #fff; margin-bottom: 8px; margin-top: 14px;">Q2: Triangle ya kisi shape ke ird-gird patla brown / dark border gayab kyun ho gaya?</h4>
+                <p>
+                    <strong>Wajah:</strong> <code>Speckle Filter</code> ki value 1 ya zyada thi, jis se 2-3px patli border noise samajh kar delete ho gayi.<br>
+                    <strong>Hal:</strong> Left Panel mein <strong>Speckle Filter slider ko 0 par kar dein</strong>. Har patli se patli line poori tarah preserve ho jayegi.
+                </p>
+
+                <h4 style="color: #fff; margin-bottom: 8px; margin-top: 14px;">Q3: Shapes ke darmian safeed rang ki patli dararein (hairline cracks) kyun nazar aati hain?</h4>
+                <p>
+                    <strong>Wajah:</strong> Cutout mode mein browser anti-aliasing ki wajah se do milte hue paths ke darmian sub-pixel gap reh jata hai.<br>
+                    <strong>Hal:</strong> Multi-color illustrations ke liye <strong><code>Stacked</code></strong> hierarchy use karein ya background layer on rakhein.
+                </p>
+            </div>
+        </section>
+
+        <!-- ── Section: Background Remover Studio ── -->
+        <section id="bg-remover" class="card">
+            <h2>🖼️ Background Remover Studio: Fast (ISNet) & Ultra (BiRefNet)</h2>
+            <p>
+                VectorForge AI features a dedicated, local-first background removal engine providing studio-grade alpha transparency without cloud APIs. It features dual AI models, morphological halo choke, and physical alpha-unmixing color decontamination.
+            </p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tier</th>
+                            <th>AI Model Name</th>
+                            <th>Model Architecture</th>
+                            <th>On-Disk Size</th>
+                            <th>Target Complexity & Edge Fidelity</th>
+                            <th>Typical CPU Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge accent">Fast (Default)</span></td>
+                            <td><code>isnet-general-use</code></td>
+                            <td>U2-Net High-Frequency Boundary Segmentation</td>
+                            <td>~178.6 MB (ONNX)</td>
+                            <td>Clean graphic logos, app icons, stickers, product photography</td>
+                            <td>~1.5s – 3.0s</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge success">Ultra (Pro)</span></td>
+                            <td><code>birefnet-general</code></td>
+                            <td>Bilateral Reference Network (BiRefNet) Dichromatic Matting</td>
+                            <td>~972.7 MB (ONNX)</td>
+                            <td>Fine human hair, animal fur, transparent glass, mesh fabrics, complex foliage</td>
+                            <td>~8.0s – 18.0s</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>🔬 Edge Defringe Halo Choke & Color Decontamination Architecture</h3>
+            <p>
+                Standard AI segmentation masks often leave a faint, unsightly fringe or border-color halo from the original backdrop. VectorForge AI eliminates this via a 3-stage post-processing pipeline:
+            </p>
+            <ul>
+                <li>
+                    <strong>1. Morphological Halo Choke (<code>cv2.erode</code>):</strong>
+                    Erodes the alpha boundary using an elliptical kernel (<code>cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))</code> with $k \in [1, 9]$). This physically pulls the cutout edge inward, stripping away border bleed before color blending.
+                </li>
+                <li>
+                    <strong>2. Physical Alpha-Unmixing Color Decontamination:</strong>
+                    In semi-transparent border pixels ($0.05 &lt; \alpha &lt; 0.95$), the observed color is an optical composite of foreground and backdrop:
+                    <div class="code-block-container" style="margin: 8px 0;">
+                        <div class="code-block">true_fg = np.clip((observed_bgr - bg_color * (1.0 - alpha)) / alpha, 0, 255)</div>
+                    </div>
+                    By inverting this optical formula, the algorithm subtracts contaminated backdrop tint and restores pure foreground color channels.
+                </li>
+                <li>
+                    <strong>3. Sub-Pixel Gaussian Feathering:</strong>
+                    Applies gentle Gaussian blurring (radius $0.0 - 9.0$) strictly to the alpha channel to guarantee silky smooth curve transitions for Bézier spline fitting.
+                </li>
+            </ul>
+
+            <div class="alert-box alert-success">
+                <div>✓</div>
+                <div>
+                    <strong>Zero-Arena Memory Optimization & Resilient Fallback:</strong>
+                    To prevent 822MB memory allocation crashes on Windows CPU architectures, BiRefNet sessions are initialized with <code>sess_opts.enable_cpu_mem_arena = False</code> and automatic garbage collection. If <code>birefnet-general.onnx</code> is not downloaded, Ultra mode automatically falls back to <code>isnet-general-use</code> without raising 500 errors.
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section: Image Enhancer Studio ── -->
+        <section id="image-enhancer" class="card">
+            <h2>✨ Image Enhancer Studio: Fast (x4v3) & Ultra (RealESRGAN_x4plus)</h2>
+            <p>
+                Low-resolution, compressed, or blurry raster graphics produce jagged and distorted vector paths. The Image Enhancer Studio reconstructs sharp edges, synthetic high frequencies, and removes compression artifacts before vectorization.
+            </p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tier</th>
+                            <th>AI Model</th>
+                            <th>Neural Network Architecture</th>
+                            <th>Size on Disk</th>
+                            <th>Inference Strengths & Processing Goals</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge accent">Fast (Default)</span></td>
+                            <td><code>realesr-general-x4v3</code></td>
+                            <td>Compact Neural Super-Resolution CNN</td>
+                            <td>~4.9 MB (ONNX)</td>
+                            <td>Lightweight 4× neural upscaling + 6-stage classical CV pipeline (~1-2s latency)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge success">Ultra (Pro)</span></td>
+                            <td><code>RealESRGAN_x4plus</code></td>
+                            <td>23-layer Residual-in-Residual Dense Block (RRDBNet)</td>
+                            <td>~67.1 MB (ONNX)</td>
+                            <td>Maximum perceptual super-resolution; synthesizes micro-details and clean contours</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>⚙️ 6-Stage Classical Computer Vision Post-Enhancement Pipeline</h3>
+            <ol>
+                <li><strong>Stage 1 — Neural Super-Resolution:</strong> 4× spatial upscale via Real-ESRGAN (x4v3 in Fast, x4plus in Ultra, or Lanczos-4 if models absent).</li>
+                <li><strong>Stage 2 — Bilateral Edge-Preserving Denoising:</strong> Removes JPEG blocking artifacts without blurring boundary contours.</li>
+                <li><strong>Stage 3 — LAB Color Space CLAHE:</strong> Equalizes contrast-limited histograms on the $L^*$ channel, avoiding color shifts while clarifying faint details.</li>
+                <li><strong>Stage 4 — Gaussian High-Pass Unsharp Masking:</strong> Accentuates high-frequency transitions ($I_{\text{sharp}} = 1.5 \cdot I - 0.5 \cdot G_\sigma(I)$).</li>
+                <li><strong>Stage 5 — Morphological Contour Refinement:</strong> Smooths staircase pixel noise along vector perimeter boundaries.</li>
+                <li><strong>Stage 6 — HSV Dynamic Range Tuning:</strong> Optimizes color saturation and dynamic vibrance for distinct palette quantization.</li>
+            </ol>
+        </section>
+
+        <!-- ── Section: Face Restoration ── -->
+        <section id="face-restoration" class="card">
+            <h2>👤 Face Restoration: YuNet Landmark Alignment & GFPGAN v1.4</h2>
+            <p>
+                When restoring vintage portraits, low-resolution profile photos, or damaged group photographs, super-resolution models alone can distort human facial anatomy. VectorForge AI integrates a dedicated Generative Facial Prior pipeline combining ultra-fast 5-point landmark detection with StyleGAN2-based codebook priors.
+            </p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subsystem</th>
+                            <th>Model / Library</th>
+                            <th>Architecture & Format</th>
+                            <th>Size on Disk</th>
+                            <th>Functionality & Math Principle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge accent">Landmark Detection</span></td>
+                            <td><code>face_detection_yunet</code></td>
+                            <td>YuNet CNN (<code>cv2.FaceDetectorYN</code>)</td>
+                            <td>~227 KB (ONNX)</td>
+                            <td>Detects face bounding boxes and predicts 5 key facial coordinates (left/right eyes, nose tip, mouth corners) in &lt; 3ms.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge success">Facial Prior GAN</span></td>
+                            <td><code>GFPGANv1.4</code></td>
+                            <td>Generative Facial Prior GAN (StyleGAN2)</td>
+                            <td>~324.5 MB (ONNX)</td>
+                            <td>Encapsulated facial component dictionary codebooks restore realistic eye pupils, irises, eyelashes, teeth, and skin micro-textures.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>🔬 Mathematical Alignment & Inverse Affine Fusion Workflow</h3>
+            <ol>
+                <li>
+                    <strong>Similarity Transform Matrix:</strong>
+                    <code>cv2.estimateAffinePartial2D</code> computes the optimal partial affine transform matrix mapping detected 5-point facial landmarks to canonical $512 \times 512$ coordinate priors.
+                </li>
+                <li>
+                    <strong>Canonical Crop & Neural Synthesis:</strong>
+                    <code>cv2.warpAffine</code> crops and aligns the normalized facial region to $512 \times 512$. GFPGAN reconstructs sharp details without facial distortion.
+                </li>
+                <li>
+                    <strong>Inverse Affine Warp & Seamless Gaussian Blending:</strong>
+                    The inverse transform matrix (<code>cv2.invertAffineTransform</code>) maps the enhanced face back into the source canvas. A radial Gaussian feathering mask seamlessly blends the boundaries into hair, jawlines, and background.
+                </li>
+            </ol>
+        </section>
+
+        <!-- ── Section: Magic Eraser Studio ── -->
+        <section id="magic-eraser" class="card">
+            <h2>🪄 Magic Eraser Studio: LaMa-ONNX Deep Inpainting</h2>
+            <p>
+                The Magic Eraser Studio provides studio-grade, local-first object removal, watermark erasure, and background filling powered by <strong>LaMa (Large Mask Inpainting)</strong> using Fast Fourier Convolutions (FFC).
+            </p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Neural Network Architecture</th>
+                            <th>Size on Disk</th>
+                            <th>Resolution Pipeline</th>
+                            <th>Core Strengths & Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>lama_fp32</code></td>
+                            <td>Fast Fourier Convolutions (FFC) ResNet Inpainting</td>
+                            <td>~198.4 MB (ONNX)</td>
+                            <td>Native $512 \times 512$ inference + Lanczos-4 upscaling</td>
+                            <td>Global frequency-domain receptive field; eliminates unwanted objects, cables, people, and text in ~3–5s on CPU.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>🎨 Interactive Sub-Pixel Canvas Brush & Coordinate Scaling</h3>
+            <ul>
+                <li>
+                    <strong>Sub-Pixel Coordinate Mapping:</strong>
+                    The interactive brush overlay dynamically converts viewport CSS mouse events to native raster coordinates:
+                    <div class="code-block-container" style="margin: 8px 0;">
+                        <div class="code-block">scaleX = canvas.width / rect.width; scaleY = canvas.height / rect.height;
+pixelX = (clientX - rect.left) * scaleX; pixelY = (clientY - rect.top) * scaleY;</div>
+                    </div>
+                </li>
+                <li>
+                    <strong>Neon Red Stroke Overlay:</strong>
+                    Draws smooth circular strokes with <code>ctx.lineCap = 'round'</code> and <code>ctx.lineJoin = 'round'</code> with vivid <code>rgba(239, 68, 68, 0.65)</code> feedback.
+                </li>
+                <li>
+                    <strong>Morphological Mask Dilation ($0 - 25\text{px}$):</strong>
+                    Applies <code>cv2.dilate</code> with an elliptical kernel to ensure the inpainting mask fully covers object anti-aliased perimeter fringes before neural inference.
+                </li>
+                <li>
+                    <strong>Lossless Mask Undo & Clear:</strong>
+                    Complete history stack allows reverting individual strokes (<code>Undo</code>) or wiping the mask completely (<code>Clear Mask</code>).
+                </li>
+                <li>
+                    <strong>Dual-Resolution Composite:</strong>
+                    After LaMa processes the $512 \times 512$ canvas, output is resized via <strong>Lanczos-4 interpolation</strong> (<code>cv2.INTER_LANCZOS4</code>) and alpha-blended with Gaussian feathering, preserving 100% of unmasked source pixels.
+                </li>
+            </ul>
+        </section>
+
+        <!-- ── Section: Live Diagnostics Dashboard ── -->
+        <section id="diagnostics" class="card">
+            <h2>🩺 Live Diagnostics Dashboard & Engine Health Telemetry</h2>
+            <p>
+                VectorForge AI includes a dedicated interactive diagnostic utility (<code>diagnose.html</code>) and backend route (<code>GET /api/diagnostics</code>) for comprehensive telemetry:
+            </p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subsystem</th>
+                            <th>Inspection Checks & Telemetry Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Neural Model Cache (7 Models)</strong></td>
+                            <td>Verifies exact byte sizes and on-disk paths for ISNet, BiRefNet, Real-ESRGAN v3, Real-ESRGAN Plus, YuNet Landmark Detector, GFPGAN v1.4, and LaMa Inpainting</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hardware Acceleration</strong></td>
+                            <td>Detects ONNX Runtime providers (<code>CPUExecutionProvider</code>, <code>CUDAExecutionProvider</code>, <code>DmlExecutionProvider</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>System & Memory Load</strong></td>
+                            <td>Reports total RAM, available RAM, memory load percentage via Windows kernel telemetry, and CPU core counts</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Synthetic Probe Runner</strong></td>
+                            <td>Sends in-browser synthetic test rasters to <code>/health</code>, <code>/api/diagnostics</code>, <code>/api/remove-bg</code>, <code>/api/enhance</code>, and <code>/api/inpaint</code> with live latency benchmarking</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>
+                Open the diagnostics tool directly from the TopBar button or navigate to:
+                <a href="diagnose.html" target="_blank" class="badge accent">Launch diagnose.html ↗</a>
+            </p>
+        </section>
+
+        <!-- ── Section: Pro Models Pre-Download ── -->
+        <section id="pro-models" class="card">
+            <h2>📦 Pro Models Pre-Download Helper</h2>
+            <p>
+                VectorForge AI includes a multi-threaded streaming CLI script (<code>scripts/download_pro_models.py</code>) equipped with HTTP Range header resume support, retry loops, and cache path validation for all 7 models:
+            </p>
+            <div class="code-block-container">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <div class="code-block"># Download all Pro and Fast models in one command (~1.7GB total across all 7 models)
+python scripts/download_pro_models.py --all
+
+# Or download individual models as needed:
+python scripts/download_pro_models.py --birefnet          # BiRefNet Ultra Remove-BG (~972.7MB)
+python scripts/download_pro_models.py --realesrgan-plus    # RealESRGAN_x4plus Ultra Enhancer (~67.1MB)
+python scripts/download_pro_models.py --realesrgan         # Real-ESRGAN x4v3 Fast Enhancer (~4.9MB)
+python scripts/download_pro_models.py --isnet              # ISNet Fast Remove-BG (~178.6MB)
+python scripts/download_pro_models.py --gfpgan             # GFPGAN v1.4 + YuNet Face Restorer (~325MB)
+python scripts/download_pro_models.py --lama               # LaMa Fast Fourier Inpainter (~198.4MB)</div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model Identifier</th>
+                            <th>Target Studio / Feature</th>
+                            <th>Default Local Cache Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>isnet-general-use</code></td>
+                            <td>Remove-BG (Fast Tier)</td>
+                            <td><code>~/.rembg/models/isnet-general-use/isnet-general-use.onnx</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>birefnet-general</code></td>
+                            <td>Remove-BG (Ultra Pro Tier)</td>
+                            <td><code>~/.rembg/models/birefnet-general/birefnet-general.onnx</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>realesr-general-x4v3</code></td>
+                            <td>Enhancer (Fast Tier)</td>
+                            <td><code>~/.cache/realesrgan/realesr-general-x4v3.onnx</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>RealESRGAN_x4plus</code></td>
+                            <td>Enhancer (Ultra Pro Tier)</td>
+                            <td><code>~/.cache/realesrgan/RealESRGAN_x4plus.onnx</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>face_detection_yunet</code></td>
+                            <td>Enhancer (Face Landmark Alignment)</td>
+                            <td><code>~/.cache/gfpgan/face_detection_yunet.onnx</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>GFPGANv1.4</code></td>
+                            <td>Enhancer (Facial Prior Restoration)</td>
+                            <td><code>~/.cache/gfpgan/GFPGANv1.4.onnx</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>lama_fp32</code></td>
+                            <td>Magic Eraser (LaMa Inpainting)</td>
+                            <td><code>~/.cache/lama/lama_fp32.onnx</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <!-- ── Section 7: Canvas ── -->
         <section id="canvas" class="card">
             <h2>🔬 Deep Zoom Studio & Split View Comparison</h2>
@@ -901,6 +1494,30 @@ npm run dev</div>
                             <td><code>{"session_id":"...", "scale":2}</code></td>
                             <td>PNG binary blob (<code>image/png</code>)</td>
                         </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/remove-bg</code></td>
+                            <td>Multipart <code>file</code>, <code>quality</code> ("fast"|"ultra"), <code>defringe_choke</code>, <code>feather_radius</code>, <code>color_decontaminate</code></td>
+                            <td><code>{"success":true, "url":"/temp/...", "width":w, "height":h, "changes":[...]}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/enhance</code></td>
+                            <td>Multipart <code>file</code>, <code>quality</code> ("fast"|"ultra"), <code>scale</code> (2|4), <code>denoise_strength</code>, <code>contrast_boost</code>, <code>restore_faces</code> (bool), <code>face_strength</code> (float)</td>
+                            <td><code>{"success":true, "url":"/temp/...", "width":w, "height":h, "changes":[...]}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/inpaint</code></td>
+                            <td>Multipart <code>file</code>, <code>mask_data</code> (base64 PNG), <code>dilate_pixels</code> (int 0–25)</td>
+                            <td><code>{"success":true, "url":"/temp/...", "width":w, "height":h, "changes":[...]}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/api/diagnostics</code></td>
+                            <td>None</td>
+                            <td>Full system telemetry: platform, RAM, ONNX providers, 7-model cache statuses, disk paths</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -909,14 +1526,14 @@ npm run dev</div>
         <!-- ── Section 11: Verification ── -->
         <section id="verification" class="card">
             <h2>🧪 Testing & Quality Assurance</h2>
-            <p>Vectorizer AI includes automated test suites covering all computer-vision filters, vector algorithms, and API routes:</p>
+            <p>Vectorizer AI includes automated test suites covering all computer-vision filters, vector algorithms, neural models, and API routes:</p>
             <div class="code-block-container">
                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                <div class="code-block"># 1. Run 9 Pytest Unit Tests
+                <div class="code-block"># 1. Run All 23 Pytest Unit Tests (Analyzers, VTracer, Enhancers, BG Remover, LaMa, GFPGAN, Diagnostics)
 python -m pytest backend/tests/test_vectorforge.py -v
 
-# 2. Run End-to-End HTTP API Integration Test
-python tests/test_api_e2e.py
+# 2. Inspect Live System Diagnostics & 7 Neural Weights
+curl http://127.0.0.1:8000/api/diagnostics
 
 # 3. Compile Production Frontend Bundle
 cd frontend
@@ -925,7 +1542,7 @@ npm run build</div>
             <div class="alert-box alert-success">
                 <div>✓</div>
                 <div>
-                    <strong>Zero Build Errors:</strong> The frontend compiles via TypeScript and Vite in &lt;400ms. All 9 Pytest tests consistently pass in under 2 seconds.
+                    <strong>Zero Build Errors & 100% Test Pass Rate:</strong> The frontend compiles via TypeScript and Vite in ~500ms. All 23 Pytest unit tests (covering ISNet, BiRefNet, RealESRGAN x4v3, RealESRGAN_x4plus, LaMa Inpainting, GFPGAN Face Restorer, and diagnostics) pass with 100% success.
                 </div>
             </div>
         </section>

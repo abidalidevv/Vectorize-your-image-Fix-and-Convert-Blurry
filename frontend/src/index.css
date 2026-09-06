@@ -172,6 +172,59 @@ code, pre { font-family: 'JetBrains Mono', monospace; }
   background: var(--border-default);
 }
 
+/* ── Studio Multi-Tool Switcher ─────────────────────────────────────────── */
+.topbar-mode-switcher {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 3px;
+}
+
+.mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.mode-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mode-tab.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-color: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+.mode-tab-icon {
+  font-size: 13px;
+}
+
+@media (max-width: 680px) {
+  .mode-tab-title {
+    display: none;
+  }
+  .mode-tab {
+    padding: 5px 9px;
+  }
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -232,6 +285,15 @@ code, pre { font-family: 'JetBrains Mono', monospace; }
 .panel-scroll::-webkit-scrollbar { width: 4px; }
 .panel-scroll::-webkit-scrollbar-track { background: transparent; }
 .panel-scroll::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
+
+.panel-bottom-bar {
+  flex-shrink: 0;
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-default);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
 
 .panel-section {
   margin-bottom: var(--space-4);
@@ -354,6 +416,23 @@ code, pre { font-family: 'JetBrains Mono', monospace; }
   white-space: nowrap;
   text-decoration: none;
   outline: none;
+  box-sizing: border-box;
+}
+
+.full-width {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.btn.full-width,
+.btn-full {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  text-align: center;
+  line-height: 1.3;
 }
 
 .btn:disabled {
@@ -406,6 +485,49 @@ code, pre { font-family: 'JetBrains Mono', monospace; }
 }
 
 .btn-icon.btn-sm { width: 26px; height: 26px; padding: 4px; }
+
+/* ── Model Tier Buttons (Default vs Pro) ────────────────────────────────── */
+.tier-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  outline: none;
+}
+
+.tier-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.tier-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tier-btn.active-default {
+  background: rgba(91, 110, 247, 0.12);
+  border-color: var(--accent-primary);
+  color: #8da2fb;
+  box-shadow: 0 0 14px rgba(91, 110, 247, 0.22);
+}
+
+.tier-btn.active-pro {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18) 0%, rgba(236, 72, 153, 0.18) 100%);
+  border-color: rgba(236, 72, 153, 0.65);
+  color: #f472b6;
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.25);
+}
 
 /* ── Form Controls ──────────────────────────────────────────────────────── */
 .control-group {
@@ -1049,16 +1171,27 @@ select:focus { border-color: var(--accent-primary); }
 
 .image-info-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-2);
   font-size: 12px;
+  line-height: 1.4;
 }
 
-.image-info-label { color: var(--text-muted); }
+.image-info-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .image-info-value {
   color: var(--text-secondary);
   font-family: 'JetBrains Mono', monospace;
   font-size: 11.5px;
+  text-align: right;
+  word-break: break-word;
+  min-width: 0;
+  flex: 1;
 }
 
 /* ── Scrollable segment selector ─────────────────────────────────────────── */

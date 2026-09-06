@@ -192,4 +192,85 @@ export async function deleteSession(sessionId: string): Promise<void> {
   await api.delete(`/api/session/${sessionId}`)
 }
 
+// ── Image Enhancer ─────────────────────────────────────────────────────────
+export interface EnhanceParams {
+  session_id: string
+  quality?: 'fast' | 'ultra'
+  model_tier?: 'default' | 'pro'
+  scale?: 1 | 2 | 4
+  sharpen_strength?: number
+  denoise_strength?: number
+  clahe_enabled?: boolean
+  contrast?: number
+  brightness?: number
+  saturation?: number
+  clarity?: number
+  face_restore?: boolean
+  face_fidelity?: number
+}
+
+export interface EnhanceResult {
+  session_id: string
+  preview_url: string
+  width: number
+  height: number
+  changes_applied: string[]
+}
+
+export async function enhanceImage(params: EnhanceParams): Promise<EnhanceResult> {
+  const { data } = await api.post<EnhanceResult>('/api/enhance', params)
+  return data
+}
+
+// ── Background Remover ─────────────────────────────────────────────────────
+export interface RemoveBgParams {
+  session_id: string
+  quality?: 'fast' | 'ultra'
+  model_tier?: 'default' | 'pro'
+  engine?: 'auto' | 'ai' | 'color'
+  tolerance?: number
+  feather_radius?: number
+  defringe_choke?: number
+  contiguous?: boolean
+  bg_type?: 'transparent' | 'color' | 'gradient'
+  bg_color?: string
+}
+
+export interface RemoveBgResult {
+  session_id: string
+  preview_url: string
+  width: number
+  height: number
+  changes_applied: string[]
+}
+
+export async function removeBackground(params: RemoveBgParams): Promise<RemoveBgResult> {
+  const { data } = await api.post<RemoveBgResult>('/api/remove-bg', params)
+  return data
+}
+
+// ── Magic Eraser / Inpainter ───────────────────────────────────────────────
+export interface InpaintParams {
+  session_id: string
+  mask_data: string
+  quality?: 'fast' | 'ultra'
+  model_tier?: 'default' | 'pro'
+  dilate_radius?: number
+  method?: 'lama' | 'telea' | 'auto'
+}
+
+export interface InpaintResult {
+  session_id: string
+  preview_url: string
+  width: number
+  height: number
+  changes_applied: string[]
+}
+
+export async function inpaintImage(params: InpaintParams): Promise<InpaintResult> {
+  const { data } = await api.post<InpaintResult>('/api/inpaint', params)
+  return data
+}
+
 export default api
+

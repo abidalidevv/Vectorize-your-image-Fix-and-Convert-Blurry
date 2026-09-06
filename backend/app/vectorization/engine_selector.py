@@ -50,6 +50,8 @@ def select_and_trace(
 
     # All other modes (color, logo, photo) -> VTracer color mode
     logger.info(f"Engine: VTracer (color, mode={mode})")
+    if mode == "logo" and "hierarchical" not in params:
+        params["hierarchical"] = "cutout"
     result = _vtracer_engine.trace(image_path, output_svg_path, params)
 
     if not result["success"]:

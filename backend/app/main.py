@@ -16,7 +16,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from core.config import settings
 from core.session import session_manager
-from api.routes import upload, analyze, preprocess, quantize, vectorize, export
+from api.routes import upload, analyze, preprocess, quantize, vectorize, export, diagnostics
+from image_enhancer.router import router as enhancer_router
+from bg_remover.router import router as bg_remover_router
+from magic_eraser.router import router as inpaint_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,6 +65,11 @@ app.include_router(preprocess.router, prefix="/api", tags=["preprocess"])
 app.include_router(quantize.router, prefix="/api", tags=["quantize"])
 app.include_router(vectorize.router, prefix="/api", tags=["vectorize"])
 app.include_router(export.router, prefix="/api", tags=["export"])
+app.include_router(enhancer_router, prefix="/api", tags=["enhance"])
+app.include_router(bg_remover_router, prefix="/api", tags=["remove-bg"])
+app.include_router(inpaint_router, prefix="/api", tags=["inpaint"])
+app.include_router(diagnostics.router, prefix="/api", tags=["diagnostics"])
+app.include_router(diagnostics.router, prefix="", tags=["diagnostics"])
 
 
 @app.get("/health", tags=["health"])

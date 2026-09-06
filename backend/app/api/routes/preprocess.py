@@ -32,6 +32,24 @@ async def preprocess(params: PreprocessParams):
             output_path,
         )
         session.preprocessed_path = output_path
+
+        # Invalidate stale downstream outputs
+        if session.quantized_path:
+            try:
+                if session.quantized_path.exists():
+                    session.quantized_path.unlink()
+            except Exception:
+                pass
+            session.quantized_path = None
+
+        if session.svg_path:
+            try:
+                if session.svg_path.exists():
+                    session.svg_path.unlink()
+            except Exception:
+                pass
+            session.svg_path = None
+
         preview_url = f"/temp/{session.session_id}/{output_path.name}"
 
         return {

@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-06
+
+### Added
+- **Magic Eraser & Inpainting Studio (LaMa-ONNX)**:
+  - Added brand-new 4th Studio Tool (`🪄 Magic Eraser`) for removing unwanted objects, text, logos, and watermarks.
+  - Integrated `LaMa-ONNX` (~198.4MB ONNX) with Fast Fourier Convolutions (FFC) operating at native 512×512 resolution with Lanczos-4 resolution recovery.
+  - Interactive HTML5 canvas brush overlay with synchronized pan, zoom, and live circular brush cursor matching visual screen size.
+  - Brush radius slider (5px–120px) with quick presets (15px, 30px, 50px, 80px) and live circular preview.
+  - Morphological mask dilation slider (0–25px) to expand mask boundary and eliminate edge halos.
+  - Pro Tier edge-gradient smoothing and seam bilateral filtering.
+  - Multi-level undo stack and clear mask controls.
+  - One-click workflow routing to Vectorizer and Image Enhancer studios.
+  - Added `POST /api/inpaint` backend route and `InpaintParams` schema.
+
+- **Old Photo & Face Restoration AI (GFPGAN v1.4)**:
+  - Integrated `GFPGANv1.4` (~324.5MB ONNX) into Image Enhancer Studio.
+  - Integrated `YuNet` face landmark detector (`face_detection_yunet.onnx`, ~227KB) executing in <3ms on CPU.
+  - Automatic 5-point landmark similarity transformation to align 512×512 facial canonical geometry (eyes, nose, mouth).
+  - High-order Generative Facial Prior GAN reconstruction with inverse affine matrix projection and Gaussian radial falloff blending.
+  - User-facing Face Restoration toggle and Face Detail Blend (Fidelity) slider (0.1–1.0).
+  - Integrated into `✨ Photo Restore` preset.
+
+- **Diagnostics & Telemetry Expansion**:
+  - Expanded `GET /api/diagnostics` and `diagnose.html` to audit all 7 studio models.
+  - Added dedicated status cards for GFPGAN, YuNet, and LaMa.
+
+- **Automated Test Suite Expansion**:
+  - Expanded unit test coverage to **23/23 passing tests** with zero failures (`test_magic_eraser_inpaint_synthetic`, `test_face_restorer_when_no_faces`, and updated diagnostics telemetry).
+
+---
+
+## [1.1.0] - 2026-09-06
+
+### Added
+- **Pro-Tier AI Background Removal Studio**:
+  - **Fast Tier**: Upgraded default segmentation to `isnet-general-use` (~178.6MB ONNX), delivering high-precision boundary detection for graphic logos, app icons, and product cutouts (~1.5s–3.0s CPU).
+  - **Ultra Pro Tier**: Integrated `birefnet-general` (~972.7MB ONNX), Bilateral Reference Network for state-of-the-art dichromatic matting (fine hair, animal fur, transparent glass, mesh fabrics).
+  - **Morphological Halo Choke**: Added elliptical kernel erosion via `cv2.erode(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))` ($k \in [1, 9]$) to pull alpha boundaries inward and physically strip background bleeding.
+  - **Physical Alpha-Unmixing Color Decontamination**: Inverts optical composite blending to restore uncorrupted foreground RGB in boundary pixels ($0.05 < \alpha < 0.95$):
+    $$\text{true\_fg} = \text{np.clip}\left(\frac{\text{observed} - \text{bg\_color} \cdot (1 - \alpha)}{\alpha}, 0, 255\right)$$
+  - **Zero-Arena Memory Management**: Configured ONNX Runtime sessions with `enable_cpu_mem_arena = False`, `inter_op_num_threads = 2`, `intra_op_num_threads = 4`, and proactive `gc.collect()`, preventing Windows `BFCArena` 822MB memory allocation crashes.
+  - **Resilient Fallback**: Automatic non-blocking fallback to Fast mode if `birefnet-general.onnx` is not cached locally.
+
+- **Pro-Tier AI Image Enhancer Studio**:
+  - **Fast Tier**: Configured `realesr-general-x4v3` (~4.9MB ONNX) as the new default AI super-resolution upscaler (~1–2s latency).
+  - **Ultra Pro Tier**: Integrated `RealESRGAN_x4plus` (~67.1MB ONNX, 23-layer RRDBNet architecture) for maximum vector-ready perceptual super-resolution and fine contour synthesis.
+  - **6-Stage Classical Enhancement Pipeline**:
+    1. Neural Super-Resolution (x4v3 Fast or x4plus Ultra)
+    2. Bilateral Filter (edge-preserving denoising)
+    3. CIE-LAB CLAHE (contrast equalization on $L^*$ channel)
+    4. Gaussian High-Pass Unsharp Masking ($I_{\text{sharp}} = 1.5 \cdot I - 0.5 \cdot G_\sigma(I)$)
+    5. Morphological Edge Refinement (smoothes boundary stairstepping)
+    6. HSV Dynamic Range & Saturation Vibrance Tuning
+  - **Resilient Fallback**: Automatic non-blocking fallback to Fast mode or high-order Lanczos-4 if Ultra weights are uncached.
+
+- **Interactive System & Model Diagnostics Tool (`diagnose.html` & `/api/diagnostics`)**:
+  - Created standalone dark-mode diagnostics dashboard (`diagnose.html`) at root, `docs/`, and `frontend/public/`.
+  - Added `GET /api/diagnostics` endpoint providing runtime telemetry: OS, CPU cores, RAM utilization, ONNX Runtime execution providers (`CPUExecutionProvider`, `CUDAExecutionProvider`, `DmlExecutionProvider`), and on-disk verification for all 4 neural models.
+  - In-browser synthetic probe runner testing `/health`, `/api/diagnostics`, `/api/remove-bg`, and `/api/enhance` with live latency benchmarking.
+  - One-click copyable JSON diagnostic report for troubleshooting.
+
+- **Resumable Multi-Model Downloader (`scripts/download_pro_models.py`)**:
+  - Chunked multi-threaded streaming downloader with HTTP Range header resume support, retry logic, and cache validation (`--all`, `--birefnet`, `--realesrgan-plus`, `--realesrgan`, `--isnet`).
+
+- **Test Suite Expansion**:
+  - Expanded unit test coverage from 11 to **21/21 passing tests** (`test_vectorforge.py`), verifying both AI models, fallbacks, color decontamination, defringe choke, and diagnostics telemetry.
+
+---
+
 ## [1.0.6] - 2026-09-05
 
 ### Added

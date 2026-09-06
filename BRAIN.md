@@ -2,7 +2,7 @@
 
 > **System Memory Bank, Technical Blueprint & Agent Hand-off Guide**  
 > **Author**: [Abid Ali](https://abidalidev.com) • [GitHub (@abidalidevv)](https://github.com/abidalidevv) • **Repository**: [Vectorize-your-image-Fix-and-Convert-Blurry](https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry)  
-> **Version**: `1.0.4` • **Status**: Production-Ready, Verified & Tested 100% Locally
+> **Version**: `1.1.0` (Pro Tier) • **Status**: Production-Ready, 21/21 Unit Tests Verified & Tested 100% Locally
 
 ---
 
@@ -43,6 +43,12 @@ vectorforge-ai/
 │   │   │   ├── vtracer_engine.py  # Primary Engine: Rust VTracer wrapper (stacked for color, cutout for B&W)
 │   │   │   ├── contour_engine.py  # Fallback Engine: OpenCV RETR_CCOMP + compound paths
 │   │   │   └── engine_selector.py # Dynamic engine dispatcher with auto line-art detection
+│   │   ├── bg_remover/            # Background Remover Studio Engine
+│   │   │   ├── engine.py          # isnet-general-use & birefnet-general matting, defringe choke
+│   │   │   └── router.py          # POST /api/remove-bg route handler
+│   │   ├── image_enhancer/        # Image Enhancer Studio Engine
+│   │   │   ├── engine.py          # realesr-general-x4v3 & RealESRGAN_x4plus, 6-stage classical CV
+│   │   │   └── router.py          # POST /api/enhance route handler
 │   │   ├── export/
 │   │   │   ├── svg_exporter.py    # Scour SVG optimizer & file saver
 │   │   │   └── png_exporter.py    # resvg-py multi-scale raster renderer (1x, 2x, 4x, 8x)
@@ -55,32 +61,29 @@ vectorforge-ai/
 │   │       ├── preprocess.py      # POST /api/preprocess
 │   │       ├── quantize.py        # POST /api/quantize
 │   │       ├── vectorize.py       # POST /api/vectorize, GET /api/svg/{session_id}
-│   │       └── export.py          # POST /api/export/svg, POST /api/export/png
+│   │       ├── export.py          # POST /api/export/svg, POST /api/export/png
+│   │       └── diagnostics.py     # GET /api/diagnostics runtime telemetry & model verification
 │   └── tests/
-│       └── test_vectorforge.py    # Pytest Unit & Integration Test Suite (11 Tests)
+│       └── test_vectorforge.py    # Pytest Unit & Integration Test Suite (21 Tests Passing)
 │
 ├── frontend/                      # React 19 + TypeScript + Vite + Zustand
-│   ├── package.json               # Frontend Dependencies & Scripts
-│   ├── vite.config.ts             # Dev Server & Reverse Proxy (/api -> 127.0.0.1:8000)
-│   ├── tsconfig.json              # TypeScript Strict Compiler Options
+│   ├── public/
+│   │   ├── documentation.html     # Master Documentation (Technical & Settings Guide)
+│   │   └── diagnose.html          # Interactive Diagnostic Dashboard & Telemetry Runner
 │   ├── src/
-│   │   ├── main.tsx               # Application Entry Point
-│   │   ├── App.tsx                # Main Layout, Paste Listener, Processing Overlay, Tabs
-│   │   ├── index.css              # Dark Glassmorphism Design System & Media Queries
-│   │   ├── store/
-│   │   │   └── appStore.ts        # Zustand Global State Management
-│   │   ├── api/
-│   │   │   └── client.ts          # Axios API Client & Typed Endpoints
-│   │   └── components/
-│   │       ├── TopBar.tsx         # Logo, Upload, Reset, SVG/PNG Export & Scale Multipliers
-│   │       ├── DropZone.tsx       # Drag-and-drop & clipboard paste file drop target
-│   │       ├── PreviewCanvas.tsx  # Deep Zoom (2000%), Pan, Before/After Split Slider
-│   │       ├── LeftPanel.tsx      # Preprocessing, Quantization, and Vectorizing Sliders
-│   │       ├── RightPanel.tsx     # Color Swatches, SVG Layers Toggling, Stats
-│   │       └── StatusBar.tsx      # Dimensions, Zoom %, Path count, Engine status
+│   │   ├── components/            # TopBar, DropZone, Canvas, Panels, StatusBar
+│   │   ├── features/
+│   │   │   ├── bg_remover/        # Background Remover Studio Panel UI
+│   │   │   └── enhancer/          # Image Enhancer Studio Panel UI
+│   │   ├── store/appStore.ts      # Zustand Global State Management
+│   │   └── api/client.ts          # Axios API Client & Typed Endpoints
+│   └── vite.config.ts             # Dev Server & Reverse Proxy (/api -> 127.0.0.1:8000)
 │
-├── docs/                          # Technical Documentation & Assets
-│   └── screenshots/               # High-Resolution UI Visuals
+├── scripts/
+│   └── download_pro_models.py     # Resumable multi-model downloader CLI
+├── documentation.html             # Master Documentation (Root)
+├── diagnose.html                  # Interactive Diagnostic Dashboard (Root)
+├── docs/                          # Screenshots & Documentation Mirror
 ├── samples/                       # Test Images (Logos, Icons, Line Art, Transparent PNGs)
 └── tests/
     └── test_api_e2e.py            # Python E2E HTTP Test Suite
@@ -249,4 +252,18 @@ When continuing or extending VectorForge AI:
    - Raster text is converted into resolution-independent Bézier glyph paths (`<path>`).
    - Letters with inner holes ('O', 'A', 'P', 'B', etc.) use compound SVG paths to ensure transparent counters.
    - `filterSpeckle: 1` prevents dots on 'i'/'j' and punctuation marks from being removed as noise.
+8. **BiRefNet Memory Arena Optimization (CRITICAL)**:
+   - On Windows CPU inference, ONNX Runtime allocates memory via `BFCArena` by default. Under large ~972MB models like `birefnet-general.onnx`, this triggers 822MB memory allocation failures.
+   - Always initialize sessions with `sess_opts.enable_cpu_mem_arena = False`, `inter_op_num_threads = 2`, `intra_op_num_threads = 4`, and trigger proactive `gc.collect()`.
+9. **Physical Alpha Unmixing Color Decontamination**:
+   - Boundary pixels in cutouts suffer from background color contamination. Always apply:
+     $$\text{true\_fg} = \text{np.clip}\left(\frac{\text{observed} - \text{bg\_color} \cdot (1 - \alpha)}{\alpha}, 0, 255\right)$$
+     combined with elliptical morphological choke (`cv2.erode`) to eradicate halo fringing.
+10. **Image Enhancer Tiering Alignment**:
+    - Fast Mode MUST use neural super-resolution `realesr-general-x4v3` (~4.9MB) + 6-stage classical CV pipeline.
+    - Ultra Mode MUST use `RealESRGAN_x4plus` (~67.1MB RRDBNet) for maximum vector-ready clarity.
+    - Both tiers MUST gracefully fall back if model weights are uncached on disk.
+11. **Diagnostics & Telemetry Integrity**:
+    - The `/api/diagnostics` endpoint and `diagnose.html` dashboard must accurately report on-disk byte sizes, active providers, and test suites across all updates.
+
 

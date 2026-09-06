@@ -80,3 +80,44 @@ class ExportPNGParams(BaseModel):
 
 class AnalyzeParams(BaseModel):
     session_id: str
+
+
+class EnhanceParams(BaseModel):
+    session_id: str
+    quality: Literal["fast", "ultra"] = "fast"
+    model_tier: Literal["default", "pro"] = "default"
+    scale: Literal[1, 2, 4] = 1
+    sharpen_strength: float = Field(default=0.8, ge=0.0, le=3.0)
+    denoise_strength: float = Field(default=0.0, ge=0.0, le=15.0)
+    clahe_enabled: bool = True
+    contrast: float = Field(default=1.0, ge=0.2, le=3.0)
+    brightness: float = Field(default=1.0, ge=0.2, le=3.0)
+    saturation: float = Field(default=1.0, ge=0.0, le=3.0)
+    clarity: float = Field(default=0.3, ge=0.0, le=1.5)
+    face_restore: bool = False
+    face_fidelity: float = Field(default=0.8, ge=0.1, le=1.0)
+
+
+class RemoveBgParams(BaseModel):
+    session_id: str
+    quality: Literal["fast", "ultra"] = "fast"
+    model_tier: Literal["default", "pro"] = "default"
+    engine: Literal["auto", "ai", "color"] = "auto"
+    tolerance: float = Field(default=35.0, ge=0.0, le=120.0)
+    feather_radius: float = Field(default=1.0, ge=0.0, le=10.0)
+    defringe_choke: int = Field(default=1, ge=0, le=5)
+    contiguous: bool = False
+    bg_type: Literal["transparent", "color", "gradient"] = "transparent"
+    bg_color: Optional[str] = "transparent"
+
+
+class InpaintParams(BaseModel):
+    session_id: str
+    mask_data: str  # Base64 data URL or PNG of mask
+    quality: Literal["fast", "ultra"] = "fast"
+    model_tier: Literal["default", "pro"] = "default"
+    dilate_radius: int = Field(default=5, ge=0, le=50)
+    method: Literal["lama", "telea", "auto"] = "auto"
+
+
+

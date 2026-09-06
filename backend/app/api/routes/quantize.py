@@ -38,6 +38,16 @@ async def quantize(params: QuantizeParams):
             method=params.method,
         )
         session.quantized_path = output_path
+
+        # Invalidate stale downstream vector output
+        if session.svg_path:
+            try:
+                if session.svg_path.exists():
+                    session.svg_path.unlink()
+            except Exception:
+                pass
+            session.svg_path = None
+
         preview_url = f"/temp/{session.session_id}/{output_path.name}"
 
         return {

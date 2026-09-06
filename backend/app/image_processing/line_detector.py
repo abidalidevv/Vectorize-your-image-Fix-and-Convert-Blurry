@@ -76,11 +76,11 @@ def detect_line_art(img: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 2) -> Tuple[Path, bool]:
+def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 4) -> Tuple[Path, bool]:
     """
-    If image contains fine line art (1-2px thin lines), supersample 2x using nearest-neighbor.
+    If image contains fine line art (1-2px thin lines), supersample using bicubic SDF zero-crossing.
     Preserves thin concentric circles, radar rings, and fine contours without morphological distortion,
-    pinching, or corner-webbing at line intersections.
+    pinching, or corner-webbing at line intersections, and produces smooth continuous Bézier curves.
     Returns (enhanced_path, was_enhanced).
     """
     try:
@@ -110,9 +110,13 @@ def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 2) -> T
 
         _, bin_inv = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-        # 2x supersampling via nearest neighbor:
-        # Thin 1px lines become 2px in coordinate space without any asymmetric dilation or pinching
-        up = cv2.resize(bin_inv, (w * scale, h * scale), interpolation=cv2.INTER_NEAREST)
+        dist_fg = cv2.distanceTransform(bin_inv, cv2.DIST_L2, 5)
+        dist_bg = cv2.distanceTransform(255 - bin_inv, cv2.DIST_L2, 5)
+        sdf = (dist_fg - dist_bg).astype(np.float32)
+
+        sdf_up = cv2.resize(sdf, (w * scale, h * scale), interpolation=cv2.INTER_CUBIC)
+
+        up = (sdf_up > -0.1).astype(np.uint8) * 255
         enhanced = cv2.bitwise_not(up)
 
         if has_alpha:
@@ -127,3 +131,8 @@ def enhance_fine_lines(image_path: Path, output_path: Path, scale: int = 2) -> T
     except Exception as e:
         logger.warning(f"Fine line enhancement failed (using original): {e}")
         return image_path, False
+
+
+# Alias for backward compatibility
+enhance_fine_lines_sdf = enhance_fine_lines
+

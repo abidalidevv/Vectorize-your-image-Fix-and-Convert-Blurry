@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="400" height="400" viewBox="0 0 400 400">
+<path d="M0 0 C132 0 264 0 400 0 C400 132 400 264 400 400 C268 400 136 400 0 400 C0 268 0 136 0 0 Z " fill="#2A9D8F" transform="translate(0,0)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 99 100 198 100 300 C133 300 166 300 200 300 C200 333 200 366 200 400 C134 400 68 400 0 400 C0 268 0 136 0 0 Z " fill="#264653" transform="translate(0,0)"/>
+<path d="M0 0 C66 0 132 0 200 0 C200 66 200 132 200 200 C167 200 134 200 100 200 C100 167 100 134 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#2A9D8F" transform="translate(100,200)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#1D3557" transform="translate(300,300)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#A8DADC" transform="translate(200,300)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#F4A261" transform="translate(100,300)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#264653" transform="translate(0,300)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#E9C46A" transform="translate(300,200)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#457B9D" transform="translate(100,200)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#E63946" transform="translate(0,200)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#1D3557" transform="translate(300,100)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#A8DADC" transform="translate(200,100)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#F4A261" transform="translate(100,100)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#E9C46A" transform="translate(300,0)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#457B9D" transform="translate(100,0)"/>
+<path d="M0 0 C33 0 66 0 100 0 C100 33 100 66 100 100 C67 100 34 100 0 100 C0 67 0 34 0 0 Z " fill="#E63946" transform="translate(0,0)"/>
+</svg>

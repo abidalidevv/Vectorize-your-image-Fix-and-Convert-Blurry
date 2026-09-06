@@ -11,10 +11,22 @@ import type {
   LayerInfo,
 } from '../api/client'
 
+export type StudioTool = 'vectorizer' | 'enhancer' | 'bgremover' | 'eraser'
 export type ViewMode = 'original' | 'enhanced' | 'vector'
 export type ImageMode = 'auto' | 'logo' | 'photo' | 'sketch' | 'bw'
 export type QualityPreset = 'fast' | 'balanced' | 'high' | 'ultra'
-export type ProcessingStage = 'idle' | 'uploading' | 'analyzing' | 'preprocessing' | 'quantizing' | 'vectorizing' | 'exporting' | 'error'
+export type ProcessingStage =
+  | 'idle'
+  | 'uploading'
+  | 'analyzing'
+  | 'preprocessing'
+  | 'quantizing'
+  | 'vectorizing'
+  | 'enhancing'
+  | 'removing_bg'
+  | 'erasing'
+  | 'exporting'
+  | 'error'
 export type MobileTab = 'controls' | 'canvas' | 'layers'
 export type VectorizeSourceStage = 'auto' | 'original' | 'preprocessed' | 'quantized'
 
@@ -47,7 +59,52 @@ export interface VectorizeSettings {
   groupByColor: boolean
 }
 
+export interface EnhancerSettings {
+  quality: 'fast' | 'ultra'
+  modelTier: 'default' | 'pro'
+  scale: 1 | 2 | 4
+  sharpenStrength: number
+  denoiseStrength: number
+  claheEnabled: boolean
+  contrast: number
+  brightness: number
+  saturation: number
+  clarity: number
+  faceRestore: boolean
+  faceFidelity: number
+}
+
+export interface BgRemoverSettings {
+  quality: 'fast' | 'ultra'
+  modelTier: 'default' | 'pro'
+  engine: 'auto' | 'ai' | 'color'
+  tolerance: number
+  featherRadius: number
+  defringeChoke: number
+  contiguous: boolean
+  bgType: 'transparent' | 'color' | 'gradient'
+  bgColor: string
+}
+
+export interface EraserSettings {
+  brushSize: number
+  quality: 'fast' | 'ultra'
+  modelTier: 'default' | 'pro'
+  dilateRadius: number
+  method: 'lama' | 'telea' | 'auto'
+}
+
+export interface ProcessedMediaResult {
+  url: string
+  width: number
+  height: number
+  changesApplied: string[]
+}
+
 export interface AppState {
+  // Navigation
+  activeTool: StudioTool
+
   // Session
   sessionId: string | null
   stage: ProcessingStage
@@ -62,12 +119,19 @@ export interface AppState {
   vectorizeSourceStage: VectorizeSourceStage
   preprocessSettings: PreprocessSettings
   vectorizeSettings: VectorizeSettings
+  enhancerSettings: EnhancerSettings
+  bgRemoverSettings: BgRemoverSettings
+  eraserSettings: EraserSettings
 
   // Results
   preprocessedUrl: string | null
   quantizedUrl: string | null
   palette: PaletteColor[]
   vectorResult: VectorizeResult | null
+  enhancedResult: ProcessedMediaResult | null
+  bgRemovedResult: ProcessedMediaResult | null
+  eraserResult: ProcessedMediaResult | null
+  eraserMaskData: string | null
   layers: LayerInfo[]
 
   // UI state
@@ -79,15 +143,23 @@ export interface AppState {
   showExportModal: boolean
 
   // Actions
+  setActiveTool: (tool: StudioTool) => void
   setStage: (stage: ProcessingStage, error?: string) => void
   setImageInfo: (info: ImageInfo) => void
   setAnalysisResult: (result: AnalysisResult) => void
   setPreprocessedUrl: (url: string) => void
   setQuantized: (palette: PaletteColor[], url: string) => void
   setVectorResult: (result: VectorizeResult) => void
+  setEnhancedResult: (result: ProcessedMediaResult | null) => void
+  setBgRemovedResult: (result: ProcessedMediaResult | null) => void
+  setEraserResult: (result: ProcessedMediaResult | null) => void
+  setEraserMaskData: (mask: string | null) => void
   setLayers: (layers: LayerInfo[]) => void
   updatePreprocessSettings: (s: Partial<PreprocessSettings>) => void
   updateVectorizeSettings: (s: Partial<VectorizeSettings>) => void
+  updateEnhancerSettings: (s: Partial<EnhancerSettings>) => void
+  updateBgRemoverSettings: (s: Partial<BgRemoverSettings>) => void
+  updateEraserSettings: (s: Partial<EraserSettings>) => void
   setNumColors: (n: number) => void
   setVectorizeSourceStage: (stage: VectorizeSourceStage) => void
   setViewMode: (mode: ViewMode) => void
@@ -121,7 +193,7 @@ const DEFAULT_VECTORIZE: VectorizeSettings = {
   colorPrecision: 7,
   layerDifference: 12,
   cornerThreshold: 75,
-  lengthThreshold: 9.0,
+  lengthThreshold: 4.0,
   filterSpeckle: 1,
   curveFitting: 'spline',
   minArea: 1.0,
@@ -129,110 +201,181 @@ const DEFAULT_VECTORIZE: VectorizeSettings = {
   groupByColor: true,
 }
 
+const DEFAULT_ENHANCER: EnhancerSettings = {
+  quality: 'fast',
+  modelTier: 'default',
+  scale: 2,
+  sharpenStrength: 0.8,
+  denoiseStrength: 0.0,
+  claheEnabled: true,
+  contrast: 1.0,
+  brightness: 1.0,
+  saturation: 1.0,
+  clarity: 0.3,
+  faceRestore: false,
+  faceFidelity: 0.8,
+}
+
+const DEFAULT_BG_REMOVER: BgRemoverSettings = {
+  quality: 'fast',
+  modelTier: 'default',
+  engine: 'auto',
+  tolerance: 35,
+  featherRadius: 1.0,
+  defringeChoke: 1,
+  contiguous: false,
+  bgType: 'transparent',
+  bgColor: '#ffffff',
+}
+
+const DEFAULT_ERASER: EraserSettings = {
+  brushSize: 32,
+  quality: 'fast',
+  modelTier: 'default',
+  dilateRadius: 5,
+  method: 'auto',
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-  sessionId: null,
-  stage: 'idle',
-  errorMessage: null,
-  imageInfo: null,
-  analysisResult: null,
-  numColors: 24,
-  vectorizeSourceStage: 'auto',
-  preprocessSettings: DEFAULT_PREPROCESS,
-  vectorizeSettings: DEFAULT_VECTORIZE,
-  preprocessedUrl: null,
-  quantizedUrl: null,
-  palette: [],
-  vectorResult: null,
-  layers: [],
-  viewMode: 'original',
-  zoom: 1,
-  splitPosition: 50,
-  showSplitView: false,
-  mobileTab: 'canvas',
-  showExportModal: false,
-
-  setStage: (stage, error) =>
-    set({ stage, errorMessage: error ?? null }),
-
-  setImageInfo: (info) =>
-    set({ imageInfo: info, sessionId: info.session_id, stage: 'idle', viewMode: 'original', mobileTab: 'canvas' }),
-
-  setAnalysisResult: (result) =>
-    set((state) => ({
-      analysisResult: result,
-      vectorizeSettings: {
-        ...state.vectorizeSettings,
-        imageMode: (result.recommended_mode === 'bw' || result.recommended_mode === 'sketch')
-          ? result.recommended_mode
-          : state.vectorizeSettings.imageMode,
-        filterSpeckle: (result.recommended_mode === 'bw' || result.recommended_mode === 'sketch')
-          ? 0
-          : state.vectorizeSettings.filterSpeckle,
-      },
-    })),
-
-  setPreprocessedUrl: (url) =>
-    set({ preprocessedUrl: url }),
-
-  setQuantized: (palette, url) =>
-    set({ palette, quantizedUrl: url }),
-
-  setVectorResult: (result) =>
-    set({ vectorResult: result, layers: result.layers, mobileTab: 'canvas' }),
-
-  setLayers: (layers) => set({ layers }),
-
-  updatePreprocessSettings: (s) =>
-    set((state) => ({ preprocessSettings: { ...state.preprocessSettings, ...s } })),
-
-  updateVectorizeSettings: (s) =>
-    set((state) => ({ vectorizeSettings: { ...state.vectorizeSettings, ...s } })),
-
-  setNumColors: (n) => set({ numColors: n }),
-  setVectorizeSourceStage: (stage) => set({ vectorizeSourceStage: stage }),
-  setViewMode: (mode) => set({ viewMode: mode }),
-  setZoom: (zoom) =>
-    set((state) => ({
-      zoom: typeof zoom === 'function' ? zoom(state.zoom) : zoom,
-    })),
-  setSplitPosition: (pos) => set({ splitPosition: pos }),
-  setShowSplitView: (show) => set({ showSplitView: show }),
-  setMobileTab: (tab) => set({ mobileTab: tab }),
-  setShowExportModal: (show) => set({ showExportModal: show }),
-
-  toggleLayerVisibility: (index) =>
-    set((state) => ({
-      layers: state.layers.map((l) =>
-        l.index === index ? { ...l, visible: !l.visible } : l
-      ),
-    })),
-
-  reset: () =>
-    set({
+      activeTool: 'vectorizer',
       sessionId: null,
       stage: 'idle',
       errorMessage: null,
       imageInfo: null,
       analysisResult: null,
+      numColors: 24,
+      vectorizeSourceStage: 'auto',
+      preprocessSettings: DEFAULT_PREPROCESS,
+      vectorizeSettings: DEFAULT_VECTORIZE,
+      enhancerSettings: DEFAULT_ENHANCER,
+      bgRemoverSettings: DEFAULT_BG_REMOVER,
+      eraserSettings: DEFAULT_ERASER,
       preprocessedUrl: null,
       quantizedUrl: null,
       palette: [],
       vectorResult: null,
+      enhancedResult: null,
+      bgRemovedResult: null,
+      eraserResult: null,
+      eraserMaskData: null,
       layers: [],
-      vectorizeSourceStage: 'auto',
       viewMode: 'original',
       zoom: 1,
+      splitPosition: 50,
+      showSplitView: false,
       mobileTab: 'canvas',
-      preprocessSettings: DEFAULT_PREPROCESS,
-      vectorizeSettings: DEFAULT_VECTORIZE,
+      showExportModal: false,
+
+      setActiveTool: (activeTool) => set({ activeTool, mobileTab: 'canvas' }),
+
+      setStage: (stage, error) =>
+        set({ stage, errorMessage: error ?? null }),
+
+      setImageInfo: (info) =>
+        set({ imageInfo: info, sessionId: info.session_id, stage: 'idle', viewMode: 'original', mobileTab: 'canvas' }),
+
+      setAnalysisResult: (result) =>
+        set((state) => ({
+          analysisResult: result,
+          vectorizeSettings: {
+            ...state.vectorizeSettings,
+            imageMode: (result.recommended_mode === 'bw' || result.recommended_mode === 'sketch')
+              ? result.recommended_mode
+              : state.vectorizeSettings.imageMode,
+            filterSpeckle: (result.recommended_mode === 'bw' || result.recommended_mode === 'sketch')
+              ? 0
+              : state.vectorizeSettings.filterSpeckle,
+          },
+        })),
+
+      setPreprocessedUrl: (url) =>
+        set({ preprocessedUrl: url }),
+
+      setQuantized: (palette, url) =>
+        set({ palette, quantizedUrl: url }),
+
+      setVectorResult: (result) =>
+        set({ vectorResult: result, layers: result.layers, mobileTab: 'canvas' }),
+
+      setEnhancedResult: (result) =>
+        set({ enhancedResult: result, mobileTab: 'canvas' }),
+
+      setBgRemovedResult: (result) =>
+        set({ bgRemovedResult: result, mobileTab: 'canvas' }),
+
+      setLayers: (layers) => set({ layers }),
+
+      updatePreprocessSettings: (s) =>
+        set((state) => ({ preprocessSettings: { ...state.preprocessSettings, ...s } })),
+
+      updateVectorizeSettings: (s) =>
+        set((state) => ({ vectorizeSettings: { ...state.vectorizeSettings, ...s } })),
+
+      updateEnhancerSettings: (s) =>
+        set((state) => ({ enhancerSettings: { ...state.enhancerSettings, ...s } })),
+
+      updateBgRemoverSettings: (s) =>
+        set((state) => ({ bgRemoverSettings: { ...state.bgRemoverSettings, ...s } })),
+
+      updateEraserSettings: (s) =>
+        set((state) => ({ eraserSettings: { ...state.eraserSettings, ...s } })),
+
+      setEraserResult: (eraserResult) => set({ eraserResult }),
+      setEraserMaskData: (eraserMaskData) => set({ eraserMaskData }),
+
+      setNumColors: (n) => set({ numColors: n }),
+      setVectorizeSourceStage: (stage) => set({ vectorizeSourceStage: stage }),
+      setViewMode: (mode) => set({ viewMode: mode }),
+      setZoom: (zoom) =>
+        set((state) => ({
+          zoom: typeof zoom === 'function' ? zoom(state.zoom) : zoom,
+        })),
+      setSplitPosition: (pos) => set({ splitPosition: pos }),
+      setShowSplitView: (show) => set({ showSplitView: show }),
+      setMobileTab: (tab) => set({ mobileTab: tab }),
+      setShowExportModal: (show) => set({ showExportModal: show }),
+
+      toggleLayerVisibility: (index) =>
+        set((state) => ({
+          layers: state.layers.map((l) =>
+            l.index === index ? { ...l, visible: !l.visible } : l
+          ),
+        })),
+
+      reset: () =>
+        set({
+          sessionId: null,
+          stage: 'idle',
+          errorMessage: null,
+          imageInfo: null,
+          analysisResult: null,
+          preprocessedUrl: null,
+          quantizedUrl: null,
+          palette: [],
+          vectorResult: null,
+          enhancedResult: null,
+          bgRemovedResult: null,
+          layers: [],
+          vectorizeSourceStage: 'auto',
+          viewMode: 'original',
+          zoom: 1,
+          mobileTab: 'canvas',
+          preprocessSettings: DEFAULT_PREPROCESS,
+          vectorizeSettings: DEFAULT_VECTORIZE,
+          enhancerSettings: DEFAULT_ENHANCER,
+          bgRemoverSettings: DEFAULT_BG_REMOVER,
+          eraserSettings: DEFAULT_ERASER,
+          eraserResult: null,
+          eraserMaskData: null,
+        }),
     }),
-  }),
-  {
-    name: 'vectorizer-ai-store',
+    {
+      name: 'vectorizer-ai-store',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
+        activeTool: state.activeTool,
         sessionId: state.sessionId,
         imageInfo: state.imageInfo,
         analysisResult: state.analysisResult,
@@ -240,12 +383,16 @@ export const useAppStore = create<AppState>()(
         quantizedUrl: state.quantizedUrl,
         palette: state.palette,
         vectorResult: state.vectorResult,
+        enhancedResult: state.enhancedResult,
+        bgRemovedResult: state.bgRemovedResult,
         layers: state.layers,
         viewMode: state.viewMode,
         numColors: state.numColors,
         vectorizeSourceStage: state.vectorizeSourceStage,
         preprocessSettings: state.preprocessSettings,
         vectorizeSettings: state.vectorizeSettings,
+        enhancerSettings: state.enhancerSettings,
+        bgRemoverSettings: state.bgRemoverSettings,
       }),
     }
   )

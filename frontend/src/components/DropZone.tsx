@@ -1,27 +1,39 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useRef } from 'react'
 import { useAppStore } from '../store/appStore'
 import { uploadImage, analyzeImage } from '../api/client'
 
 export default function DropZone() {
   const { stage, setStage, setImageInfo, setAnalysisResult, reset } = useAppStore()
   const [dragOver, setDragOver] = React.useState(false)
+  const isUploadingRef = useRef(false)
 
   const processFile = useCallback(async (file: File) => {
+    if (isUploadingRef.current) return
     if (!file.type.startsWith('image/') && !file.name.match(/\.(png|jpg|jpeg|bmp|webp)$/i)) {
       setStage('error', 'Unsupported file type. Please upload PNG, JPG, BMP, or WebP.')
       return
     }
+
+    isUploadingRef.current = true
     reset()
     setStage('uploading')
+
     try {
       const info = await uploadImage(file)
       setImageInfo(info)
-      setStage('analyzing')
-      const analysis = await analyzeImage(info.session_id)
-      setAnalysisResult(analysis)
       setStage('idle')
+
+      // Analyze in background without blocking UI
+      try {
+        const analysis = await analyzeImage(info.session_id)
+        setAnalysisResult(analysis)
+      } catch (analysisErr) {
+        console.warn('Auto analysis note:', analysisErr)
+      }
     } catch (err: any) {
       setStage('error', err?.response?.data?.detail || `Upload failed: ${String(err)}`)
+    } finally {
+      isUploadingRef.current = false
     }
   }, [reset, setStage, setImageInfo, setAnalysisResult])
 
@@ -40,6 +52,7 @@ export default function DropZone() {
   const handleDragLeave = () => setDragOver(false)
 
   const handleClick = () => {
+    if (isUploadingRef.current) return
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.png,.jpg,.jpeg,.bmp,.webp,image/png,image/jpeg,image/bmp,image/webp'
@@ -50,18 +63,7 @@ export default function DropZone() {
     input.click()
   }
 
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const file = items[i].getAsFile()
-        if (file) processFile(file)
-        break
-      }
-    }
-  }, [processFile])
-
-  const isLoading = stage === 'uploading' || stage === 'analyzing'
+  const isLoading = stage === 'uploading'
 
   return (
     <div
@@ -70,7 +72,6 @@ export default function DropZone() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={handleClick}
-      onPaste={handlePaste}
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && handleClick()}
       role="button"
@@ -82,11 +83,11 @@ export default function DropZone() {
 
       <div>
         <div className="upload-title">
-          {isLoading ? 'Processing…' : 'Drop image here'}
+          {isLoading ? 'Uploading…' : 'Drop image here'}
         </div>
         <div className="upload-subtitle" style={{marginTop: 4}}>
           {isLoading
-            ? stage === 'uploading' ? 'Uploading your image…' : 'Analyzing image type…'
+            ? 'Uploading your image…'
             : 'or click to browse · paste from clipboard supported'}
         </div>
       </div>
@@ -98,9 +99,8 @@ export default function DropZone() {
       </div>
 
       <div style={{fontSize: 11, color: 'var(--text-muted)'}}>
-        Max 50 MB · Up to 8000×8000 px
+        Maximum file size: 50 MB · All processing runs locally
       </div>
     </div>
   )
 }
-

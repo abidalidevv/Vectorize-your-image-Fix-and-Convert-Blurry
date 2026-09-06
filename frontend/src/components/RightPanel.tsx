@@ -4,7 +4,11 @@ import { useAppStore } from '../store/appStore'
 type RightSection = 'palette' | 'layers' | 'stats'
 
 export default function RightPanel() {
-  const { palette, vectorResult, layers, toggleLayerVisibility, imageInfo } = useAppStore()
+  const {
+    palette, vectorResult, layers, toggleLayerVisibility,
+    imageInfo, activeTool, enhancedResult, bgRemovedResult,
+  } = useAppStore()
+
   const [activeTab, setActiveTab] = useState<RightSection>('palette')
 
   const stats = vectorResult?.stats
@@ -15,6 +19,129 @@ export default function RightPanel() {
     return `${b} B`
   }
 
+  // ── Tool: Image Enhancer Info ───────────────────────────────────────────
+  if (activeTool === 'enhancer') {
+    return (
+      <div className="right-panel">
+        <div style={{padding:'var(--space-4)', borderBottom:'1px solid var(--border-subtle)'}}>
+          <div className="panel-section-title">✨ Enhancer Studio</div>
+          <div style={{fontSize:11, color:'var(--text-muted)', marginTop:2}}>
+            High-Resolution Upscaling & Clarity
+          </div>
+        </div>
+
+        <div className="panel-scroll" style={{padding:'var(--space-4)'}}>
+          <div className="image-info-card">
+            <div className="image-info-row">
+              <span className="image-info-label">Original Res</span>
+              <span className="image-info-value">{imageInfo ? `${imageInfo.width} × ${imageInfo.height} px` : '—'}</span>
+            </div>
+            <div className="image-info-row">
+              <span className="image-info-label">Enhanced Res</span>
+              <span className="image-info-value" style={{color: enhancedResult ? 'var(--success)' : 'inherit'}}>
+                {enhancedResult ? `${enhancedResult.width} × ${enhancedResult.height} px` : 'Pending…'}
+              </span>
+            </div>
+            <div className="image-info-row">
+              <span className="image-info-label">Magnification</span>
+              <span className="image-info-value">
+                {enhancedResult && imageInfo ? `${Math.round(enhancedResult.width / imageInfo.width)}× HD` : '1×'}
+              </span>
+            </div>
+          </div>
+
+          {enhancedResult && (
+            <div style={{marginTop: 16}}>
+              <div className="panel-section-title" style={{marginBottom: 8, fontSize: 12}}>
+                Applied Pipeline
+              </div>
+              <div style={{display:'flex', flexDirection:'column', gap: 6}}>
+                {enhancedResult.changesApplied.map((c, i) => (
+                  <div key={i} style={{
+                    fontSize: 11,
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    background: 'rgba(16,185,129,0.1)',
+                    border: '1px solid rgba(16,185,129,0.25)',
+                    color: '#10b981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <span>✓</span>
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Tool: Remove BG Info ────────────────────────────────────────────────
+  if (activeTool === 'bgremover') {
+    return (
+      <div className="right-panel">
+        <div style={{padding:'var(--space-4)', borderBottom:'1px solid var(--border-subtle)'}}>
+          <div className="panel-section-title">✂️ Remove BG Studio</div>
+          <div style={{fontSize:11, color:'var(--text-muted)', marginTop:2}}>
+            Cutout & Background Isolation
+          </div>
+        </div>
+
+        <div className="panel-scroll" style={{padding:'var(--space-4)'}}>
+          <div className="image-info-card">
+            <div className="image-info-row">
+              <span className="image-info-label">Status</span>
+              <span className={`image-info-value ${bgRemovedResult ? 'text-success' : ''}`}>
+                {bgRemovedResult ? 'Cutout Ready ✓' : 'Awaiting Action'}
+              </span>
+            </div>
+            <div className="image-info-row">
+              <span className="image-info-label">Resolution</span>
+              <span className="image-info-value">
+                {imageInfo ? `${imageInfo.width} × ${imageInfo.height} px` : '—'}
+              </span>
+            </div>
+            <div className="image-info-row">
+              <span className="image-info-label">Format</span>
+              <span className="image-info-value" title="PNG with Alpha Transparency">PNG (Alpha)</span>
+            </div>
+          </div>
+
+          {bgRemovedResult && (
+            <div style={{marginTop: 16}}>
+              <div className="panel-section-title" style={{marginBottom: 8, fontSize: 12}}>
+                Processing Operations
+              </div>
+              <div style={{display:'flex', flexDirection:'column', gap: 6}}>
+                {bgRemovedResult.changesApplied.map((c, i) => (
+                  <div key={i} style={{
+                    fontSize: 11,
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    background: 'rgba(245,158,11,0.1)',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                    color: '#f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <span>✓</span>
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Tool: Vectorizer (Palette, Layers, Stats) ───────────────────────────
   return (
     <div className="right-panel">
       {/* Tab selector */}
@@ -99,15 +226,13 @@ export default function RightPanel() {
                     title={`Click to toggle visibility`}
                   >
                     <div
-                      className="layer-dot"
-                      style={{ background: layer.color_hex, opacity: layer.visible ? 1 : 0.3 }}
+                      className="layer-item-color"
+                      style={{ background: layer.color_hex }}
                     />
-                    <span className="layer-name" style={{ opacity: layer.visible ? 1 : 0.4 }}>
-                      {layer.label}
-                    </span>
-                    <span className="layer-count">{layer.path_count}p</span>
-                    <span className="layer-eye">
-                      {layer.visible ? '👁' : '○'}
+                    <span className="layer-item-name">{layer.label}</span>
+                    <span className="layer-item-paths">{layer.path_count}p</span>
+                    <span className="layer-item-visibility">
+                      {layer.visible ? '👁' : '🚫'}
                     </span>
                   </div>
                 ))}
@@ -116,11 +241,11 @@ export default function RightPanel() {
           </div>
         )}
 
-        {/* ── Stats Tab ────────────────────────────────────────────────── */}
+        {/* ── Stats Tab ───────────────────────────────────────────────── */}
         {activeTab === 'stats' && (
           <div>
             <div className="panel-section-title" style={{marginBottom:'var(--space-3)'}}>
-              Vector Statistics
+              SVG Statistics
             </div>
 
             {!stats ? (
@@ -206,4 +331,3 @@ export default function RightPanel() {
     </div>
   )
 }
-
