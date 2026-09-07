@@ -235,19 +235,28 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-#### Optional: AI Model Pre-Download (One-Time)
-To avoid any network delay during live HTTP requests, you can pre-download the models offline using the built-in helper script:
+#### 🚀 Optional: Pre-Download All AI Models (1-Click / One-Time)
+To use all Pro features (BiRefNet BG Remover, GFPGAN Face Restorer, Real-ESRGAN Upscaler, LaMa Magic Eraser) completely offline without live HTTP download delays:
 
-```powershell
-# Pre-download all models (BiRefNet ~972MB + RealESRGAN_x4plus ~67MB + ISNet ~178MB + Real-ESRGAN v3 ~4.8MB)
-python scripts/download_pro_models.py --all
+- **Windows (1-Click)**:
+  Simply double-click `download_models.bat` in the project root, or run in terminal:
+  ```powershell
+  .\download_models.bat
+  ```
 
-# Or pre-download individually:
-python scripts/download_pro_models.py --birefnet         # BiRefNet Ultra (~972MB)
-python scripts/download_pro_models.py --realesrgan-plus  # RealESRGAN_x4plus Ultra (~67MB)
-python scripts/download_pro_models.py --realesrgan       # Real-ESRGAN v3 Fast (~4.8MB)
-python scripts/download_pro_models.py --isnet            # ISNet Fast (~178.6MB)
-```
+- **Linux / macOS**:
+  ```bash
+  chmod +x download_models.sh
+  ./download_models.sh
+  ```
+
+The script automatically verifies existing caches and downloads any missing model weights:
+- **GFPGAN v1.4 (~324.5MB)** & **YuNet (~0.2MB)**: Face & Eye Restoration
+- **LaMa FP32 (~198.4MB)**: Magic Eraser Inpainting
+- **BiRefNet Ultra (~972MB)** & **ISNet (~178.6MB)**: High-resolution Matting BG Remover
+- **RealESRGAN_x4plus (~67.1MB)** & **Real-ESRGAN v3 (~4.9MB)**: AI Super-Resolution
+
+*(You can also run the Python scripts directly: `python scripts/download_new_models.py` and `python scripts/download_pro_models.py`)*
 
 Alternatively, you can pre-download them with one-line Python commands:
 - **RealESRGAN_x4plus Ultra Model (~67MB)**:
