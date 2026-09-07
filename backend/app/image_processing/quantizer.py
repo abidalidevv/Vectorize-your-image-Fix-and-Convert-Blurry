@@ -126,7 +126,7 @@ def _median_cut_quantize(img: np.ndarray, k: int) -> tuple:
     quantized_pil = pil.quantize(colors=k, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
 
     palette_raw = quantized_pil.getpalette()
-    num_colors = k
+    num_colors = min(k, len(palette_raw) // 3) if palette_raw else 0
     palette = []
     for i in range(num_colors):
         palette.append([palette_raw[i*3], palette_raw[i*3+1], palette_raw[i*3+2]])

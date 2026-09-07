@@ -105,6 +105,7 @@ class VTracerEngine(AbstractTracer):
             # Fine line detail preservation via supersampling (no corner dilation)
             trace_image_path = image_path
             temp_enhanced_path = None
+            pre_quantize_path = None
             preserve_fine_lines = params.get("preserve_fine_lines", True)
             used_scale = 1
             orig_img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
@@ -120,6 +121,51 @@ class VTracerEngine(AbstractTracer):
                     length_threshold = min(length_threshold, 4.0)
                     used_scale = 2
                     logger.info(f"VTracer fine line mode active for {image_path.name}")
+
+            from image_processing.quantizer import quantize_image
+            pre_quantize_path = image_path.parent / f"{image_path.stem}_prequant.png"
+            num_colors = int(params.get("color_precision", preset["color_precision"])) ** 2
+            num_colors = max(8, min(num_colors, 64))  # sensible bounds, tune if needed
+            quant_result = quantize_image(trace_image_path, pre_quantize_path, num_colors=num_colors, method="auto")
+
+            # Merge tiny anti-aliasing/blend color clusters into their nearest major color
+            MIN_COLOR_AREA_PCT = 0.7  # Colors covering < 0.7% of pixels are edge blends/slivers
+            small_colors = [p for p in quant_result["palette"] if p["percentage"] < MIN_COLOR_AREA_PCT]
+            major_colors = [p for p in quant_result["palette"] if p["percentage"] >= MIN_COLOR_AREA_PCT]
+
+            if small_colors and major_colors:
+                import numpy as np
+                from PIL import Image
+
+                pil_img = Image.open(pre_quantize_path)
+                has_alpha = pil_img.mode in ("RGBA", "LA")
+                if has_alpha:
+                    rgba_arr = np.array(pil_img.convert("RGBA"))
+                    img_arr = rgba_arr[:, :, :3]
+                    alpha_arr = rgba_arr[:, :, 3]
+                else:
+                    img_arr = np.array(pil_img.convert("RGB"))
+                    alpha_arr = None
+
+                major_rgb = np.array([p["rgb"] for p in major_colors])
+
+                for sc in small_colors:
+                    sc_rgb = np.array(sc["rgb"])
+                    mask = np.all(img_arr == sc_rgb, axis=-1)
+                    if not mask.any():
+                        continue
+                    dists = np.sum((major_rgb - sc_rgb) ** 2, axis=1)
+                    nearest = major_rgb[np.argmin(dists)]
+                    img_arr[mask] = nearest
+
+                if alpha_arr is not None:
+                    merged_rgba = np.dstack([img_arr, alpha_arr])
+                    Image.fromarray(merged_rgba.astype(np.uint8)).save(pre_quantize_path, "PNG")
+                else:
+                    Image.fromarray(img_arr.astype(np.uint8)).save(pre_quantize_path, "PNG")
+                logger.info(f"Merged {len(small_colors)} tiny anti-alias color clusters into nearest major colors")
+
+            trace_image_path = pre_quantize_path
 
             logger.info(f"VTracer tracing {trace_image_path} -> {output_svg_path}")
 
@@ -143,6 +189,11 @@ class VTracerEngine(AbstractTracer):
             if temp_enhanced_path and temp_enhanced_path.exists():
                 try:
                     temp_enhanced_path.unlink()
+                except Exception:
+                    pass
+            if pre_quantize_path and pre_quantize_path.exists():
+                try:
+                    pre_quantize_path.unlink()
                 except Exception:
                     pass
 

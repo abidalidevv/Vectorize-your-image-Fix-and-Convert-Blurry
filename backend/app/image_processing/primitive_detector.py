@@ -73,16 +73,23 @@ def detect_primitives(image_path: Path) -> dict:
             x_avg = (x1 + x2) / 2
             lines.append((x_avg, 0.0, x_avg, float(h)))
 
-    # de-duplicate near-identical merged lines
-    unique_lines = []
-    for ln in lines:
-        if not any(abs(ln[1]-o[1]) < 3 and abs(ln[3]-o[3]) < 3 for o in unique_lines):
-            unique_lines.append(ln)
-    lines = unique_lines
-
     dist = cv2.distanceTransform(fg_mask, cv2.DIST_L2, 5)
     avg_half_width = float(np.sum(dist) / foreground_count) if foreground_count else 1.0
     stroke_width = max(1.0, avg_half_width * 1.6)
+
+    h_lines = [ln for ln in lines if ln[1] == ln[3]]
+    v_lines = [ln for ln in lines if ln[0] == ln[2]]
+
+    merge_tol = max(6.0, stroke_width * 1.5)
+
+    def _dedup(group, key_idx):
+        unique = []
+        for ln in group:
+            if not any(abs(ln[key_idx] - o[key_idx]) < merge_tol for o in unique):
+                unique.append(ln)
+        return unique
+
+    lines = _dedup(h_lines, 1) + _dedup(v_lines, 0)
 
     primitive_mask = np.zeros_like(fg_mask)
     for (cx, cy, r) in circles:
