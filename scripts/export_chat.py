@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 transcript_path = r"C:\Users\Abid\.gemini\antigravity-ide\brain\33b58ac1-16de-49e4-a376-2974737980a9\.system_generated\logs\transcript_full.jsonl"
-output_path_repo = r"c:\Users\Abid\Desktop\vector\vectorforge-ai\CHAT_TRANSCRIPT.md"
+output_path_repo = r"c:\Users\Abid\Desktop\vector\vectorforge-ai\md\CHAT_TRANSCRIPT.md"
 output_path_root = r"c:\Users\Abid\Desktop\vector\CHAT_TRANSCRIPT.md"
 
 def clean_user_prompt(text):
