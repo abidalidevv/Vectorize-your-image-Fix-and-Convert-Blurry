@@ -129,7 +129,24 @@ export default function TopBar() {
 
       <div className="topbar-divider" />
 
-      {/* ── Studio Multi-Tool Switcher ───────────────────────────────── */}
+      {/* 1st: Upload Image Button */}
+      <button
+        className="btn btn-primary btn-sm topbar-upload-btn"
+        onClick={handleFilePicker}
+        disabled={isProcessing}
+        data-tooltip="Upload PNG, JPG, BMP, or WebP"
+        data-tooltip-pos="bottom"
+      >
+        {stage === 'uploading' ? (
+          <><span className="spinner" style={{width:12,height:12}} /> <span className="btn-text">Uploading…</span></>
+        ) : (
+          <>⬆ <span className="btn-text">Upload</span><span className="btn-text-full"> Image</span></>
+        )}
+      </button>
+
+      <div className="topbar-divider" />
+
+      {/* 2nd: Studio Multi-Tool Switcher Menu Bar */}
       <div className="topbar-mode-switcher" role="tablist" aria-label="Studio Mode">
         <button
           className={`mode-tab ${activeTool === 'vectorizer' ? 'active' : ''}`}
@@ -165,131 +182,43 @@ export default function TopBar() {
         </button>
       </div>
 
-      <div className="topbar-divider" />
-
-      {/* Upload button */}
-      <button
-        className="btn btn-primary btn-sm topbar-upload-btn"
-        onClick={handleFilePicker}
-        disabled={isProcessing}
-        data-tooltip="Upload PNG, JPG, BMP, or WebP"
-        data-tooltip-pos="bottom"
-      >
-        {stage === 'uploading' ? (
-          <><span className="spinner" style={{width:12,height:12}} /> <span className="btn-text">Uploading…</span></>
-        ) : (
-          <>⬆ <span className="btn-text">Upload</span><span className="btn-text-full"> Image</span></>
-        )}
-      </button>
-
+      {/* 3rd: Reset Button */}
       {sessionId && (
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={handleReset}
-          disabled={isProcessing}
-          data-tooltip="Clear current image and start over"
-          data-tooltip-pos="bottom"
-        >
-          ↺ <span className="btn-text">Reset</span>
-        </button>
+        <>
+          <div className="topbar-divider" />
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleReset}
+            disabled={isProcessing}
+            data-tooltip="Clear current image and start over"
+            data-tooltip-pos="bottom"
+          >
+            ↺ <span className="btn-text">Reset</span>
+          </button>
+        </>
       )}
 
-      <a
-        href="/documentation.html"
-        target="_blank"
-        rel="noopener"
-        className="btn btn-secondary btn-sm"
-        style={{textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5}}
-        data-tooltip="Open Master Documentation & Image Settings Guide"
-        data-tooltip-pos="bottom"
-      >
-        📖 <span className="btn-text">Docs & Guide</span>
-      </a>
-
-      <a
-        href="/diagnose.html"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn btn-secondary btn-sm"
-        style={{textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, borderColor: 'rgba(16, 185, 129, 0.35)'}}
-        data-tooltip="Open System, Hardware & Model Diagnostics Dashboard"
-        data-tooltip-pos="bottom"
-      >
-        🩺 <span className="btn-text">Diagnose</span>
-      </a>
-
-      {/* Export & Download actions */}
+      {/* Very Right Side: Export As Button */}
       <div className="topbar-actions">
-        {activeTool === 'vectorizer' && vectorResult && (
-          <>
-            <button
-              className="btn btn-primary btn-sm topbar-export-main-btn"
-              onClick={() => setShowExportModal(true)}
-              disabled={isProcessing}
-              data-tooltip="Open Export & Download Dialog (SVG, PNG up to 8×)"
-              data-tooltip-pos="bottom"
-            >
-              ⤓ <span className="btn-text">Export</span><span className="btn-text-full"> As…</span>
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleExportSVG}
-              disabled={isProcessing}
-              data-tooltip="Quick Download Optimized SVG"
-              data-tooltip-pos="bottom"
-            >
-              {stage === 'exporting' ? <span className="spinner" style={{width:12,height:12}} /> : null}
-              ⬇ SVG
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              disabled={isProcessing}
-              onClick={() => handleExportPNG(2)}
-              data-tooltip="Quick Export 2× HD PNG"
-              data-tooltip-pos="bottom"
-            >
-              ⬇ PNG (2×)
-            </button>
-          </>
-        )}
-
-        {activeTool === 'enhancer' && enhancedResult && (
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleDownloadEnhanced}
-            disabled={isProcessing}
-            style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}
-            title="Download Enhanced High-Res PNG"
-          >
-            ⬇ Download Enhanced PNG ({enhancedResult.width}×{enhancedResult.height})
-          </button>
-        )}
-
-        {activeTool === 'bgremover' && bgRemovedResult && (
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleDownloadBgRemoved}
-            disabled={isProcessing}
-            style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}
-            title="Download Cutout PNG"
-          >
-            ⬇ Download Cutout PNG ({bgRemovedResult.width}×{bgRemovedResult.height})
-          </button>
-        )}
-
-        {activeTool === 'eraser' && eraserResult && (
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleDownloadEraser}
-            disabled={isProcessing}
-            style={{background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)'}}
-            title="Download Clean Inpainted PNG"
-          >
-            ⬇ Download Clean PNG ({eraserResult.width}×{eraserResult.height})
-          </button>
-        )}
+        <button
+          className="btn btn-primary btn-sm topbar-export-main-btn"
+          onClick={() => setShowExportModal(true)}
+          disabled={isProcessing || !sessionId}
+          data-tooltip="Open Export & Download Dialog"
+          data-tooltip-pos="bottom"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 14px',
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: (isProcessing || !sessionId) ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ⤓ <span className="btn-text">Export</span><span className="btn-text-full"> As…</span>
+        </button>
       </div>
     </div>
   )

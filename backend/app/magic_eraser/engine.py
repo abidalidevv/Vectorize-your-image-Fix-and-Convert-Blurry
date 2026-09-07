@@ -86,19 +86,66 @@ def _decode_mask_data(mask_data: str, target_w: int, target_h: int) -> np.ndarra
     return mask_dilated
 
 
-def _pad_to_multiple(tensor: np.ndarray, multiple: int = 8) -> Tuple[np.ndarray, int, int]:
-    """Pad H and W dimensions of (1, C, H, W) to multiples of 8 for FFC."""
+def _pad_to_512(tensor: np.ndarray) -> Tuple[np.ndarray, int, int]:
+    """Pad H and W dimensions of (1, C, H, W) tensor to exactly 512x512 using reflect padding."""
     _, _, h, w = tensor.shape
-    new_h = (h + multiple - 1) // multiple * multiple
-    new_w = (w + multiple - 1) // multiple * multiple
-    pad_h = new_h - h
-    pad_w = new_w - w
+    pad_h = max(0, 512 - h)
+    pad_w = max(0, 512 - w)
 
     if pad_h == 0 and pad_w == 0:
         return tensor, 0, 0
 
-    padded = np.pad(tensor, ((0, 0), (0, 0), (0, pad_h), (0, pad_w)), mode='reflect')
+    mode = 'reflect' if (pad_h < h and pad_w < w) else 'edge'
+    padded = np.pad(tensor, ((0, 0), (0, 0), (0, pad_h), (0, pad_w)), mode=mode)
     return padded, pad_h, pad_w
+
+
+def _pad_to_multiple(tensor: np.ndarray, multiple: int = 8) -> Tuple[np.ndarray, int, int]:
+    """Pad H and W dimensions of (1, C, H, W) to multiples of 8 or 512 for FFC."""
+    return _pad_to_512(tensor)
+
+
+def _expand_mask_to_objects(np_rgb: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """
+    Intelligently expand brush mask to fully enclose connected objects/text/shapes
+    so that partially painted objects don't leave residual blurry borders.
+    """
+    h, w = mask.shape[:2]
+    total_pixels = h * w
+    mask_pixels = int(np.count_nonzero(mask > 0))
+    if mask_pixels == 0 or mask_pixels > total_pixels * 0.7:
+        return mask
+
+    try:
+        # Sample borders to detect dominant background color
+        borders = np.vstack([np_rgb[0, :, :], np_rgb[-1, :, :], np_rgb[:, 0, :], np_rgb[:, -1, :]])
+        bg_color = np.median(borders, axis=0)
+        bg_dist = np.linalg.norm(np_rgb.astype(float) - bg_color, axis=2)
+
+        brush_dist = bg_dist[mask > 0]
+        if len(brush_dist) > 0 and np.median(brush_dist) > 15.0:
+            # User painted on foreground object distinct from border background
+            fg_mask = (bg_dist > 12.0).astype(np.uint8)
+            num_labels, labels = cv2.connectedComponents(fg_mask)
+            touched_labels = np.unique(labels[mask > 0])
+            touched_labels = touched_labels[touched_labels != 0]
+
+            expanded = mask.copy()
+            expanded_any = False
+            for lbl in touched_labels:
+                comp = (labels == lbl)
+                comp_size = int(np.sum(comp))
+                overlap = int(np.sum(comp & (mask > 0)))
+                if comp_size < (total_pixels * 0.50) and (overlap >= min(40, comp_size * 0.05)):
+                    expanded = np.maximum(expanded, comp.astype(np.uint8) * 255)
+                    expanded_any = True
+            if expanded_any:
+                logger.info("Smart Object Snap expanded brush mask to full connected object boundaries.")
+            return expanded
+    except Exception as e:
+        logger.debug(f"Object snap expansion skipped: {e}")
+
+    return mask
 
 
 def inpaint_image(
@@ -140,38 +187,54 @@ def inpaint_image(
         rgb_img.save(output_path, "PNG")
         return ["No mask painted (image unchanged)"], orig_w, orig_h
 
-    # Expand mask margin if configured
-    if dilate_radius > 0:
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_radius * 2 + 1, dilate_radius * 2 + 1))
+    # 1. Smart Object Snap: Expand mask to enclose partially painted foreground objects
+    mask_uint8 = _expand_mask_to_objects(np_rgb, mask_uint8)
+
+    # 2. Expand mask margin to guarantee complete boundary clearing
+    effective_dilate = max(dilate_radius, 8) if quality in ("pro", "ultra") else max(dilate_radius, 6)
+    if effective_dilate > 0:
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (effective_dilate * 2 + 1, effective_dilate * 2 + 1))
         mask_uint8 = cv2.dilate(mask_uint8, kernel)
-        changes.append(f"Mask Margin Expansion ({dilate_radius}px)")
+        changes.append(f"Mask Margin Expansion ({effective_dilate}px)")
 
     sess = None if method == "telea" else _get_lama_session()
     if sess is None or method == "telea":
         # Fallback or explicit OpenCV Navier-Stokes/Telea inpainting
         logger.info("Using OpenCV Telea inpainting.")
-        inpainted = cv2.inpaint(np_rgb, mask_uint8, inpaintRadius=5, flags=cv2.INPAINT_TELEA)
+        inpainted = cv2.inpaint(np_rgb, mask_uint8, inpaintRadius=max(5, effective_dilate // 2), flags=cv2.INPAINT_TELEA)
         changes.append("Object Removal (OpenCV Fast Inpaint)")
     else:
         logger.info("Executing LaMa neural inpainting...")
-        # LaMa model requires 512x512 input tensors
-        img_512 = cv2.resize(np_rgb, (512, 512), interpolation=cv2.INTER_AREA if (orig_w >= 512 and orig_h >= 512) else cv2.INTER_LINEAR)
-        mask_512 = cv2.resize(mask_uint8, (512, 512), interpolation=cv2.INTER_NEAREST)
-        mask_512 = np.where(mask_512 > 10, 255, 0).astype(np.uint8)
+        # 1. Compute scale factor so longer dimension fits 512 (maintain aspect ratio)
+        scale = 512.0 / max(orig_w, orig_h)
+        scaled_w = int(round(orig_w * scale))
+        scaled_h = int(round(orig_h * scale))
+        scaled_w = min(512, max(1, scaled_w))
+        scaled_h = min(512, max(1, scaled_h))
 
-        # Prepare image tensor: shape (1, 3, 512, 512) float32 in [0.0, 1.0]
-        img_f = (img_512.astype(np.float32) / 255.0).transpose(2, 0, 1)[np.newaxis, :]
-        # Prepare mask tensor: shape (1, 1, 512, 512) float32 in [0.0, 1.0]
-        mask_f = (mask_512.astype(np.float32) / 255.0)[np.newaxis, np.newaxis, :]
+        # 2. Resize image and mask using scale factor (INTER_AREA for image, INTER_NEAREST for mask)
+        img_scaled = cv2.resize(np_rgb, (scaled_w, scaled_h), interpolation=cv2.INTER_AREA)
+        mask_scaled = cv2.resize(mask_uint8, (scaled_w, scaled_h), interpolation=cv2.INTER_NEAREST)
+        mask_scaled = np.where(mask_scaled > 10, 255, 0).astype(np.uint8)
+
+        # 3. Pad shorter dimension with reflect padding to reach exactly 512x512 without stretching
+        img_f = (img_scaled.astype(np.float32) / 255.0).transpose(2, 0, 1)[np.newaxis, :]
+        mask_f = (mask_scaled.astype(np.float32) / 255.0)[np.newaxis, np.newaxis, :]
+
+        img_padded, pad_h, pad_w = _pad_to_512(img_f)
+        mask_padded, _, _ = _pad_to_512(mask_f)
+
+        # Zero out object content inside mask hole so LaMa cannot see or blur existing object
+        img_masked = img_padded * (1.0 - mask_padded)
 
         inputs = sess.get_inputs()
         feed_dict = {}
         for inp in inputs:
             name = inp.name
             if 'mask' in name.lower():
-                feed_dict[name] = mask_f
+                feed_dict[name] = mask_padded
             else:
-                feed_dict[name] = img_f
+                feed_dict[name] = img_masked
 
         # Run inference
         out_512 = sess.run(None, feed_dict)[0]
@@ -184,11 +247,13 @@ def inpaint_image(
         else:
             out_rgb_512 = np.clip(out_512_img, 0, 255).astype(np.uint8)
 
-        # Resize inpainted background back to original image dimensions
-        out_rgb = cv2.resize(out_rgb_512, (orig_w, orig_h), interpolation=cv2.INTER_LANCZOS4)
+        # 4. Crop back to pre-pad region, then resize (Lanczos-4) back to original dimensions
+        out_cropped = out_rgb_512[:scaled_h, :scaled_w]
+        out_rgb = cv2.resize(out_cropped, (orig_w, orig_h), interpolation=cv2.INTER_LANCZOS4)
 
-        # Seamless composite: Keep original unmasked pixels 100% untouched
-        feather_mask = cv2.GaussianBlur(mask_uint8.astype(np.float32) / 255.0, (7, 7), 0)[:, :, np.newaxis]
+        # Distance-transform edge feathering (blends smoothly strictly in outer background, avoiding object blur)
+        dist_to_bg = cv2.distanceTransform(mask_uint8, cv2.DIST_L2, 5)
+        feather_mask = np.clip(dist_to_bg / 4.0, 0.0, 1.0)[:, :, np.newaxis]
         inpainted = (out_rgb.astype(np.float32) * feather_mask +
                      np_rgb.astype(np.float32) * (1.0 - feather_mask)).astype(np.uint8)
         changes.append("LaMa Inpainting AI (512px FFC Native)")

@@ -148,20 +148,17 @@ export default function EnhancerPanel() {
           maxWidth: '100%',
           boxSizing: 'border-box'
         }}>
-          <div className="flex-row" style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="flex-row" style={{ marginBottom: 6 }}>
             <span className="image-info-label" style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
               AI Image Detection
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {Math.round(analysisResult.confidence * 100)}% confidence
-            </span>
           </div>
-          <div className="flex-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <div className="flex-row" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className={`analysis-mode-badge mode-${analysisResult.recommended_mode}`}>
               {analysisResult.recommended_mode.toUpperCase()}
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-              {analysisResult.recommended_mode === 'photo' ? 'Continuous Tone Photo' : 'Graphic / Vector / Artwork'}
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {Math.round(analysisResult.confidence * 100)}% confidence
             </span>
           </div>
           <div className="confidence-bar" style={{ marginTop: 6 }}>
@@ -192,8 +189,7 @@ export default function EnhancerPanel() {
             }}
             title={`Apply optimal enhancement settings tailored for ${analysisResult.recommended_mode.toUpperCase()} images`}
           >
-            <span>✨</span>
-            <span>Use Recommended Settings ({analysisResult.recommended_mode.toUpperCase()})</span>
+            <span>Recommended Settings</span>
           </button>
 
           {appliedRecommended && (
@@ -218,100 +214,61 @@ export default function EnhancerPanel() {
         <div className="control-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Model Tier</span>
           <span style={{
-            fontSize: 10,
-            padding: '2px 8px',
-            borderRadius: 10,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            background: isUltra
-              ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(168, 85, 247, 0.25))'
-              : 'rgba(59, 130, 246, 0.15)',
-            color: isUltra ? '#f472b6' : '#60a5fa',
-            border: isUltra
-              ? '1px solid rgba(244, 114, 182, 0.45)'
-              : '1px solid rgba(96, 165, 250, 0.35)',
+            fontSize: 10.5,
+            fontWeight: 600,
+            color: isUltra ? '#f472b6' : '#10b981',
+            background: isUltra ? 'rgba(236, 72, 153, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+            border: isUltra ? '1px solid rgba(244, 114, 182, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+            padding: '2px 7px',
+            borderRadius: 'var(--radius-sm)',
           }}>
-            {isUltra ? '👑 Pro Active' : '⚡ Standard Active'}
+            Model : {isUltra ? 'RealESRGAN x4+' : 'Real-ESRGAN v3'}
           </span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6 }}>
+        <div className="segment-tabs" style={{ marginTop: 6 }}>
           <button
             type="button"
-            className={`tier-btn ${!isUltra ? 'active-default' : ''}`}
-            onClick={() => updateEnhancerSettings({ quality: 'fast', modelTier: 'default' })}
+            className={`segment-tab ${!isUltra ? 'active' : ''}`}
+            onClick={() => updateEnhancerSettings({
+              quality: 'fast',
+              modelTier: 'default',
+              scale: enhancerSettings.scale === 1 ? 2 : enhancerSettings.scale
+            })}
             disabled={isProcessing}
             style={{
-              padding: '10px 8px',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              borderRadius: 8,
-              border: !isUltra ? '1.5px solid #5b6ef7' : '1px solid var(--border-default)',
-              background: !isUltra ? 'rgba(91, 110, 247, 0.14)' : 'var(--bg-elevated)',
-              boxShadow: !isUltra ? '0 0 14px rgba(91, 110, 247, 0.25)' : 'none',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              background: !isUltra ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : undefined,
+              color: !isUltra ? '#ffffff' : undefined,
+              boxShadow: !isUltra ? '0 2px 10px rgba(16, 185, 129, 0.4)' : undefined,
+              border: !isUltra ? 'none' : undefined,
               transition: 'all 0.2s ease',
             }}
-            title="Fast AI super-resolution (realesr-general-x4v3) + tone enhancement"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <span style={{ fontWeight: 700, fontSize: 13, color: !isUltra ? '#ffffff' : 'var(--text-secondary)' }}>Standard</span>
-              <span style={{
-                fontSize: 9,
-                padding: '1px 5px',
-                borderRadius: 4,
-                background: 'rgba(52, 211, 153, 0.2)',
-                color: '#34d399',
-                fontWeight: 700
-              }}>FREE</span>
-            </div>
-            <span style={{ fontSize: 10.5, color: !isUltra ? '#93c5fd' : 'var(--text-muted)' }}>
-              Real-ESRGAN v3
-            </span>
+            Standard
           </button>
-
           <button
             type="button"
-            className={`tier-btn ${isUltra ? 'active-pro' : ''}`}
-            onClick={() => updateEnhancerSettings({ quality: 'ultra', modelTier: 'pro' })}
+            className={`segment-tab ${isUltra ? 'active' : ''}`}
+            onClick={() => updateEnhancerSettings({
+              quality: 'ultra',
+              modelTier: 'pro',
+              scale: enhancerSettings.scale === 1 ? 4 : enhancerSettings.scale
+            })}
             disabled={isProcessing}
             style={{
-              padding: '10px 8px',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              borderRadius: 8,
-              border: isUltra ? '1.5px solid #ec4899' : '1px solid var(--border-default)',
-              background: isUltra ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.22) 0%, rgba(236, 72, 153, 0.22) 100%)' : 'var(--bg-elevated)',
-              boxShadow: isUltra ? '0 0 16px rgba(236, 72, 153, 0.3)' : 'none',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              background: isUltra ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : undefined,
+              color: isUltra ? '#ffffff' : undefined,
+              boxShadow: isUltra ? '0 2px 10px rgba(236, 72, 153, 0.4)' : undefined,
+              border: isUltra ? 'none' : undefined,
               transition: 'all 0.2s ease',
             }}
-            title="Pro Ultra-quality deep super-resolution (RealESRGAN_x4plus RRDBNet)"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-              <span style={{ fontSize: 14 }}>👑</span>
-              <span style={{ fontWeight: 700, fontSize: 13, color: isUltra ? '#ffffff' : 'var(--text-secondary)' }}>Pro</span>
-              <span style={{
-                fontSize: 9,
-                padding: '1px 5px',
-                borderRadius: 4,
-                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                color: '#ffffff',
-                fontWeight: 700
-              }}>AI PRO</span>
-            </div>
-            <span style={{ fontSize: 10.5, color: isUltra ? '#f472b6' : 'var(--text-muted)' }}>
-              RealESRGAN x4+
-            </span>
+            Pro
           </button>
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.4 }}>
@@ -329,7 +286,7 @@ export default function EnhancerPanel() {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => updateEnhancerSettings({
-              scale: 1, sharpenStrength: 0.8, denoiseStrength: 1.0, claheEnabled: true, clarity: 0.3, contrast: 1.0, brightness: 1.0, saturation: 1.0
+              scale: 2, sharpenStrength: 0.8, denoiseStrength: 1.0, claheEnabled: true, clarity: 0.3, contrast: 1.0, brightness: 1.0, saturation: 1.0
             })}
             title="Balanced Auto Enhancement"
           >
@@ -359,7 +316,7 @@ export default function EnhancerPanel() {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => updateEnhancerSettings({
-              scale: 1, sharpenStrength: 1.0, denoiseStrength: 3.5, claheEnabled: true, clarity: 0.4, contrast: 1.1, brightness: 1.02, saturation: 1.15, faceRestore: true, faceFidelity: 0.85
+              scale: 2, sharpenStrength: 1.0, denoiseStrength: 3.5, claheEnabled: true, clarity: 0.4, contrast: 1.1, brightness: 1.02, saturation: 1.15, faceRestore: true, faceFidelity: 0.85
             })}
             title="Photo Restoration & Tone (Includes Face Restoration AI)"
           >

@@ -40,6 +40,27 @@ def _get_system_memory() -> Dict[str, Any]:
             avail_gb = round(stat.ullAvailPhys / (1024 ** 3), 2)
             used_pct = stat.dwMemoryLoad
             return {"total_gb": total_gb, "available_gb": avail_gb, "used_percent": used_pct}
+        elif sys.platform.startswith("linux"):
+            meminfo: Dict[str, float] = {}
+            meminfo_file = Path("/proc/meminfo")
+            if meminfo_file.exists():
+                with open(meminfo_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        parts = line.split(":")
+                        if len(parts) == 2:
+                            key = parts[0].strip()
+                            val_str = parts[1].strip().split()[0]
+                            try:
+                                meminfo[key] = float(val_str)
+                            except ValueError:
+                                pass
+                if "MemTotal" in meminfo and "MemAvailable" in meminfo:
+                    total_kb = meminfo["MemTotal"]
+                    avail_kb = meminfo["MemAvailable"]
+                    total_gb = round(total_kb / (1024 * 1024), 2)
+                    avail_gb = round(avail_kb / (1024 * 1024), 2)
+                    used_percent = round(((total_kb - avail_kb) / total_kb) * 100.0, 1)
+                    return {"total_gb": total_gb, "available_gb": avail_gb, "used_percent": used_percent}
     except Exception as e:
         logger.debug(f"Memory probe fallback: {e}")
     return {"total_gb": None, "available_gb": None, "used_percent": None}

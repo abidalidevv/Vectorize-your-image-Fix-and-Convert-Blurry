@@ -3,10 +3,12 @@ VectorForge AI — Application Configuration
 """
 from pathlib import Path
 from pydantic_settings import BaseSettings  # type: ignore[import]
-from pydantic import Field
+from pydantic import Field, ConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(env_file=".env")
+
     # Application
     app_name: str = "VectorForge AI"
     debug: bool = False
@@ -29,9 +31,6 @@ class Settings(BaseSettings):
     # Processing limits
     max_colors: int = 64
     min_image_size: int = 8  # pixels
-
-    class Config:
-        env_file = ".env"
 
 
 settings = Settings()

@@ -70,17 +70,65 @@ export default function StatusBar() {
         </>
       )}
 
-      <div className="statusbar-status">
-        {stage === 'error' && errorMessage && (
-          <span style={{color:'var(--error)', fontSize:11, maxWidth:300, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-            ⚠ {errorMessage}
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <a
+          href="/documentation.html"
+          target="_blank"
+          rel="noopener"
+          style={{
+            color: 'var(--text-muted)',
+            fontSize: 11,
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            transition: 'color 0.15s ease',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+          title="Open Master Documentation & Image Settings Guide"
+        >
+          📖 <span>Docs & Guide</span>
+        </a>
+
+        <div className="statusbar-sep" />
+
+        <a
+          href="/diagnose.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'var(--text-muted)',
+            fontSize: 11,
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            transition: 'color 0.15s ease',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#34d399')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+          title="Open System, Hardware & Model Diagnostics Dashboard"
+        >
+          🩺 <span>Diagnose</span>
+        </a>
+
+        <div className="statusbar-sep" />
+
+        <div className="statusbar-status" style={{ marginLeft: 0 }}>
+          {stage === 'error' && errorMessage && (
+            <span style={{color:'var(--error)', fontSize:11, maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+              ⚠ {errorMessage}
+            </span>
+          )}
+          <div className={`status-dot ${stage === 'error' ? 'error' : isWorking ? 'working' : 'ready'}`} />
+          <span style={{fontSize:11, color:'var(--text-muted)'}}>
+            {STAGE_LABELS[stage] ?? stage}
           </span>
-        )}
-        <div className={`status-dot ${stage === 'error' ? 'error' : isWorking ? 'working' : 'ready'}`} />
-        <span style={{fontSize:11, color:'var(--text-muted)'}}>
-          {STAGE_LABELS[stage] ?? stage}
-        </span>
-        {isWorking && <span className="spinner" style={{width:10, height:10}} />}
+          {isWorking && <span className="spinner" style={{width:10, height:10}} />}
+        </div>
       </div>
     </div>
   )

@@ -132,6 +132,7 @@ export interface AppState {
   bgRemovedResult: ProcessedMediaResult | null
   eraserResult: ProcessedMediaResult | null
   eraserMaskData: string | null
+  eraserToolMode: 'brush' | 'pan'
   layers: LayerInfo[]
 
   // UI state
@@ -154,6 +155,7 @@ export interface AppState {
   setBgRemovedResult: (result: ProcessedMediaResult | null) => void
   setEraserResult: (result: ProcessedMediaResult | null) => void
   setEraserMaskData: (mask: string | null) => void
+  setEraserToolMode: (mode: 'brush' | 'pan') => void
   setLayers: (layers: LayerInfo[]) => void
   updatePreprocessSettings: (s: Partial<PreprocessSettings>) => void
   updateVectorizeSettings: (s: Partial<VectorizeSettings>) => void
@@ -229,10 +231,10 @@ const DEFAULT_BG_REMOVER: BgRemoverSettings = {
 }
 
 const DEFAULT_ERASER: EraserSettings = {
-  brushSize: 32,
+  brushSize: 42,
   quality: 'fast',
   modelTier: 'default',
-  dilateRadius: 5,
+  dilateRadius: 10,
   method: 'auto',
 }
 
@@ -260,6 +262,7 @@ export const useAppStore = create<AppState>()(
       bgRemovedResult: null,
       eraserResult: null,
       eraserMaskData: null,
+      eraserToolMode: 'brush',
       layers: [],
       viewMode: 'original',
       zoom: 1,
@@ -268,7 +271,12 @@ export const useAppStore = create<AppState>()(
       mobileTab: 'canvas',
       showExportModal: false,
 
-      setActiveTool: (activeTool) => set({ activeTool, mobileTab: 'canvas' }),
+      setActiveTool: (activeTool) =>
+        set({
+          activeTool,
+          mobileTab: 'canvas',
+          ...(activeTool === 'eraser' ? { eraserToolMode: 'brush', viewMode: 'original' } : {}),
+        }),
 
       setStage: (stage, error) =>
         set({ stage, errorMessage: error ?? null }),
@@ -324,6 +332,7 @@ export const useAppStore = create<AppState>()(
 
       setEraserResult: (eraserResult) => set({ eraserResult }),
       setEraserMaskData: (eraserMaskData) => set({ eraserMaskData }),
+      setEraserToolMode: (eraserToolMode) => set({ eraserToolMode }),
 
       setNumColors: (n) => set({ numColors: n }),
       setVectorizeSourceStage: (stage) => set({ vectorizeSourceStage: stage }),

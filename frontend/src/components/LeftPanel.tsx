@@ -12,7 +12,7 @@ export default function LeftPanel() {
     vectorizeSettings, vectorizeSourceStage, setVectorResult,
     enhancerSettings, setEnhancedResult,
     bgRemoverSettings, setBgRemovedResult,
-    eraserSettings, eraserMaskData, setEraserResult,
+    eraserSettings, eraserMaskData, setEraserMaskData, setEraserResult,
     setStage, setViewMode,
   } = useAppStore()
 
@@ -129,6 +129,8 @@ export default function LeftPanel() {
         height: res.height,
         changesApplied: res.changes_applied,
       })
+      setEraserMaskData(null)
+      window.dispatchEvent(new CustomEvent('vectorforge:clear_eraser_mask'))
       setViewMode('enhanced')
       setStage('idle')
     } catch (err: any) {
@@ -240,10 +242,8 @@ export default function LeftPanel() {
             >
               {stage === 'enhancing' ? (
                 <><span className="spinner" style={{ width: 15, height: 15 }} /> Enhancing Image…</>
-              ) : (enhancerSettings.quality === 'ultra' || enhancerSettings.modelTier === 'pro') ? (
-                '👑 Enhance Image (Pro)'
               ) : (
-                '⚡ Enhance Image (Standard)'
+                '◈ Enhance Image'
               )}
             </button>
           )}
@@ -269,10 +269,8 @@ export default function LeftPanel() {
             >
               {stage === 'removing_bg' ? (
                 <><span className="spinner" style={{ width: 15, height: 15 }} /> Removing Background…</>
-              ) : (bgRemoverSettings.quality === 'ultra' || bgRemoverSettings.modelTier === 'pro') ? (
-                '👑 Remove Background (Pro)'
               ) : (
-                '✂️ Remove Background (Standard)'
+                '◈ Remove Background'
               )}
             </button>
           )}
@@ -303,11 +301,9 @@ export default function LeftPanel() {
               {stage === 'erasing' ? (
                 <><span className="spinner" style={{ width: 15, height: 15 }} /> Erasing Unwanted Area…</>
               ) : !eraserMaskData ? (
-                '🖌️ Paint Over Object First'
-              ) : (eraserSettings.quality === 'ultra' || eraserSettings.modelTier === 'pro') ? (
-                '👑 Erase Object (Pro Inpaint)'
+                'Paint Over Object First'
               ) : (
-                '🪄 Erase Object (Magic Eraser)'
+                '◈ Erase Object'
               )}
             </button>
           )}

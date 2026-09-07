@@ -28,6 +28,7 @@ export default function EraserPanel() {
     eraserSettings, updateEraserSettings,
     eraserResult, setEraserResult,
     eraserMaskData, setEraserMaskData,
+    eraserToolMode, setEraserToolMode,
     setStage, setViewMode, setActiveTool, setVectorizeSourceStage,
   } = useAppStore()
 
@@ -57,6 +58,8 @@ export default function EraserPanel() {
         height: res.height,
         changesApplied: res.changes_applied,
       })
+      setEraserMaskData(null)
+      window.dispatchEvent(new CustomEvent('vectorforge:clear_eraser_mask'))
       setViewMode('enhanced')
       setStage('idle')
     } catch (err: any) {
@@ -94,105 +97,113 @@ export default function EraserPanel() {
         </div>
       </div>
 
+      {/* Canvas Tool Mode: Draw Mask vs Pan */}
+      <div className="control-group" style={{ marginBottom: 14 }}>
+        <div className="control-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Canvas Action</span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+            Hold <kbd style={{ padding: '1px 5px', borderRadius: 4, background: 'var(--bg-card)', border: '1px solid var(--border-default)', fontSize: 10, fontFamily: 'monospace' }}>Space</kbd> to pan
+          </span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 4 }}>
+          <button
+            type="button"
+            className={`btn ${eraserToolMode === 'brush' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+            onClick={(e) => {
+              (e.currentTarget as HTMLButtonElement).blur()
+              setEraserToolMode('brush')
+              setViewMode('original')
+            }}
+            disabled={isProcessing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              padding: '8px 10px',
+              fontWeight: 600,
+              fontSize: 12,
+            }}
+          >
+            <span>🖌️</span>
+            <span>Draw Mask</span>
+          </button>
+          <button
+            type="button"
+            className={`btn ${eraserToolMode === 'pan' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+            onClick={(e) => {
+              (e.currentTarget as HTMLButtonElement).blur()
+              setEraserToolMode('pan')
+            }}
+            disabled={isProcessing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              padding: '8px 10px',
+              fontWeight: 600,
+              fontSize: 12,
+            }}
+          >
+            <span>✋</span>
+            <span>Pan / Move</span>
+          </button>
+        </div>
+      </div>
+
       {/* Model Tier Selector: Standard vs Pro */}
       <div className="control-group" style={{ marginBottom: 12 }}>
         <div className="control-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Model Tier</span>
           <span style={{
-            fontSize: 10,
-            padding: '2px 8px',
-            borderRadius: 10,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            background: isUltra
-              ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(168, 85, 247, 0.25))'
-              : 'rgba(59, 130, 246, 0.15)',
-            color: isUltra ? '#f472b6' : '#60a5fa',
-            border: isUltra
-              ? '1px solid rgba(244, 114, 182, 0.45)'
-              : '1px solid rgba(96, 165, 250, 0.35)',
+            fontSize: 10.5,
+            fontWeight: 600,
+            color: isUltra ? '#f472b6' : '#f43f5e',
+            background: isUltra ? 'rgba(236, 72, 153, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+            border: isUltra ? '1px solid rgba(244, 114, 182, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+            padding: '2px 7px',
+            borderRadius: 'var(--radius-sm)',
           }}>
-            {isUltra ? '👑 Pro Active' : '⚡ Standard Active'}
+            Model : {isUltra ? 'LaMa Pro + Blend' : 'Fast LaMa AI'}
           </span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6 }}>
+        <div className="segment-tabs" style={{ marginTop: 6 }}>
           <button
             type="button"
-            className={`tier-btn ${!isUltra ? 'active-default' : ''}`}
+            className={`segment-tab ${!isUltra ? 'active' : ''}`}
             onClick={() => updateEraserSettings({ quality: 'fast', modelTier: 'default' })}
             disabled={isProcessing}
             style={{
-              padding: '10px 8px',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              borderRadius: 8,
-              border: !isUltra ? '1.5px solid #5b6ef7' : '1px solid var(--border-default)',
-              background: !isUltra ? 'rgba(91, 110, 247, 0.14)' : 'var(--bg-elevated)',
-              boxShadow: !isUltra ? '0 0 14px rgba(91, 110, 247, 0.25)' : 'none',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              background: !isUltra ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : undefined,
+              color: !isUltra ? '#ffffff' : undefined,
+              boxShadow: !isUltra ? '0 2px 10px rgba(244, 63, 94, 0.4)' : undefined,
+              border: !isUltra ? 'none' : undefined,
               transition: 'all 0.2s ease',
             }}
-            title="Fast LaMa Inpainting neural network"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <span style={{ fontWeight: 700, fontSize: 13, color: !isUltra ? '#ffffff' : 'var(--text-secondary)' }}>Standard</span>
-              <span style={{
-                fontSize: 9,
-                padding: '1px 5px',
-                borderRadius: 4,
-                background: 'rgba(52, 211, 153, 0.2)',
-                color: '#34d399',
-                fontWeight: 700
-              }}>FREE</span>
-            </div>
-            <span style={{ fontSize: 10.5, color: !isUltra ? '#93c5fd' : 'var(--text-muted)' }}>
-              Fast LaMa AI
-            </span>
+            Standard
           </button>
-
           <button
             type="button"
-            className={`tier-btn ${isUltra ? 'active-pro' : ''}`}
+            className={`segment-tab ${isUltra ? 'active' : ''}`}
             onClick={() => updateEraserSettings({ quality: 'ultra', modelTier: 'pro' })}
             disabled={isProcessing}
             style={{
-              padding: '10px 8px',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              borderRadius: 8,
-              border: isUltra ? '1.5px solid #ec4899' : '1px solid var(--border-default)',
-              background: isUltra ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.22) 0%, rgba(236, 72, 153, 0.22) 100%)' : 'var(--bg-elevated)',
-              boxShadow: isUltra ? '0 0 16px rgba(236, 72, 153, 0.3)' : 'none',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              background: isUltra ? 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)' : undefined,
+              color: isUltra ? '#ffffff' : undefined,
+              boxShadow: isUltra ? '0 2px 10px rgba(236, 72, 153, 0.4)' : undefined,
+              border: isUltra ? 'none' : undefined,
               transition: 'all 0.2s ease',
             }}
-            title="Pro LaMa Inpainting with high-fidelity multi-scale edge blending"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-              <span style={{ fontSize: 14 }}>👑</span>
-              <span style={{ fontWeight: 700, fontSize: 13, color: isUltra ? '#ffffff' : 'var(--text-secondary)' }}>Pro</span>
-              <span style={{
-                fontSize: 9,
-                padding: '1px 5px',
-                borderRadius: 4,
-                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                color: '#ffffff',
-                fontWeight: 700
-              }}>AI PRO</span>
-            </div>
-            <span style={{ fontSize: 10.5, color: isUltra ? '#f472b6' : 'var(--text-muted)' }}>
-              LaMa + Blend
-            </span>
+            Pro
           </button>
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.4 }}>
@@ -225,7 +236,7 @@ export default function EraserPanel() {
           disabled={isProcessing}
         />
         <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-          {[15, 30, 50, 80].map(sz => (
+          {[20, 35, 50, 80].map(sz => (
             <button
               key={sz}
               type="button"
@@ -242,13 +253,27 @@ export default function EraserPanel() {
       <Slider
         label="Edge Expansion (Mask Margin)"
         value={eraserSettings.dilateRadius}
-        min={0} max={25} step={1}
+        min={0} max={30} step={1}
         unit="px"
         onChange={v => updateEraserSettings({ dilateRadius: v })}
         disabled={isProcessing}
       />
-      <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: -6, marginBottom: 12 }}>
-        Expands the brush stroke slightly to eliminate halos around the removed object.
+      <div style={{
+        fontSize: 11,
+        color: '#34d399',
+        background: 'rgba(52, 211, 153, 0.08)',
+        border: '1px solid rgba(52, 211, 153, 0.25)',
+        borderRadius: 6,
+        padding: '6px 10px',
+        marginTop: -6,
+        marginBottom: 12,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        lineHeight: 1.35
+      }}>
+        <span>✨</span>
+        <span><b>Smart Snap Active:</b> Automatically clears full object boundaries so no blurry edges remain.</span>
       </div>
 
       {/* Mask Action Buttons */}
@@ -376,7 +401,7 @@ export default function EraserPanel() {
                 setActiveTool('vectorizer')
               }}
             >
-              ⚡ Jump to Vectorizer →
+              ◈ Jump to Vectorizer →
             </button>
           </div>
         </div>

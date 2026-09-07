@@ -147,9 +147,23 @@ def _remove_bg_rembg(img: Image.Image) -> Optional[Image.Image]:
             alpha_orig = alpha_small.resize((w, h), Image.Resampling.BILINEAR)
             cutout = img.convert("RGBA")
             cutout.putalpha(alpha_orig)
-            return cutout
         else:
-            return rembg.remove(img, session=session)
+            cutout = rembg.remove(img, session=session)
+
+        # Sanity check: compute fraction of image area with alpha > 128 (foreground_ratio)
+        alpha_arr = np.array(cutout.split()[3])
+        fg_pixels = int(np.count_nonzero(alpha_arr > 128))
+        total_pixels = alpha_arr.size
+        foreground_ratio = fg_pixels / max(1, total_pixels)
+
+        if foreground_ratio < 0.02 or foreground_ratio > 0.98:
+            logger.info(
+                f"isnet produced a degenerate mask (fg_ratio={foreground_ratio:.4f}), "
+                f"falling back to deterministic engine"
+            )
+            return None
+
+        return cutout
     except Exception as e:
         logger.warning(f"rembg Fast removal failed: {e}")
         return None

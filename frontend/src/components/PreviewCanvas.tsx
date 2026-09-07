@@ -2,28 +2,152 @@ import React, { useRef, useState, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { ViewMode } from '../store/appStore'
 
+// Module-level Spacebar physical state tracking fallback
+let isSpaceGloballyDown = false
+
+const isSpaceKey = (e: KeyboardEvent) =>
+  e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar' || e.keyCode === 32 || e.which === 32
+
+const isTextInput = (target: EventTarget | null) => {
+  if (!target || !(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  if (tag === 'TEXTAREA') return true
+  if (tag === 'INPUT') {
+    const type = (target as HTMLInputElement).type
+    return !['range', 'checkbox', 'radio', 'button', 'submit', 'color', 'reset'].includes(type)
+  }
+  return target.isContentEditable
+}
+
 export default function PreviewCanvas() {
   const {
     imageInfo, vectorResult, preprocessedUrl, quantizedUrl,
     enhancedResult, bgRemovedResult, eraserResult, activeTool,
     eraserSettings, setEraserMaskData,
+    eraserToolMode,
     viewMode, setViewMode, zoom, setZoom,
   } = useAppStore()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const maskCanvasRef = useRef<HTMLCanvasElement>(null)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const viewportRef = useRef<HTMLDivElement>(null)
+
+  // Smooth Pan State & Ref
+  const [pan, _setPan] = useState({ x: 0, y: 0 })
+  const panRef = useRef({ x: 0, y: 0 })
+  const zoomRef = useRef(zoom)
+  useEffect(() => {
+    zoomRef.current = zoom
+  }, [zoom])
+
+  const setPan = (updater: { x: number; y: number } | ((p: { x: number; y: number }) => { x: number; y: number })) => {
+    _setPan(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      panRef.current = next
+      if (viewportRef.current) {
+        viewportRef.current.style.transform = `translate(${next.x}px, ${next.y}px) scale(${zoomRef.current})`
+      }
+      return next
+    })
+  }
+
+  // Pan drag state
+  const isDraggingRef = useRef(false)
   const [dragging, setDragging] = useState(false)
-  const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 })
-  const [splitPos, setSplitPos] = useState(50)
+  const dragOriginRef = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 })
+
+  // Split View Drag State
+  const draggingSplitRef = useRef(false)
   const [draggingSplit, setDraggingSplit] = useState(false)
+  const [splitPos, setSplitPos] = useState(50)
   const [showSplit, setShowSplit] = useState(false)
 
   // Eraser drawing state
+  const isDrawingRef = useRef(false)
   const [isDrawing, setIsDrawing] = useState(false)
   const [brushPos, setBrushPos] = useState<{ x: number; y: number } | null>(null)
   const strokeHistoryRef = useRef<ImageData[]>([])
-  const [spacePressed, setSpacePressed] = useState(false)
+
+  // Spacebar tracking
+  const spacePressedRef = useRef(isSpaceGloballyDown)
+  const [spacePressed, setSpacePressed] = useState(isSpaceGloballyDown)
+
+  // Robust window-level keyboard listeners
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isSpaceKey(e)) return
+      if (isTextInput(e.target)) return
+
+      // Prevent page scroll and button click
+      e.preventDefault()
+
+      isSpaceGloballyDown = true
+      if (!spacePressedRef.current) {
+        spacePressedRef.current = true
+        setSpacePressed(true)
+        setBrushPos(null)
+      }
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!isSpaceKey(e)) return
+      if (isTextInput(e.target)) return
+
+      e.preventDefault()
+      isSpaceGloballyDown = false
+      spacePressedRef.current = false
+      setSpacePressed(false)
+    }
+
+    const handleBlur = () => {
+      isSpaceGloballyDown = false
+      spacePressedRef.current = false
+      setSpacePressed(false)
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        isSpaceGloballyDown = false
+        spacePressedRef.current = false
+        setSpacePressed(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false })
+    window.addEventListener('keyup', handleKeyUp, { capture: true, passive: false })
+    window.addEventListener('blur', handleBlur)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
+      window.removeEventListener('keyup', handleKeyUp, { capture: true })
+      window.removeEventListener('blur', handleBlur)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
+  // Helper to check whether a mouse button should initiate canvas panning
+  const canPanWithButton = (button: number, e?: React.MouseEvent | MouseEvent) => {
+    // Middle click (wheel) or Right click always pans in all modes
+    if (button === 1 || button === 2) return true
+    // Left click (button 0):
+    if (button === 0) {
+      // If Spacebar is actively held down OR Alt key is held down -> ALWAYS PAN
+      if (spacePressedRef.current || spacePressed || isSpaceGloballyDown || e?.altKey) return true
+      // In non-eraser tools (Vectorizer, Enhancer, BgRemover) -> Always Pan
+      if (activeTool !== 'eraser') return true
+      // In Magic Eraser, if user is viewing the clean result (viewMode === 'enhanced') -> Pan
+      if (viewMode === 'enhanced') return true
+      // In Magic Eraser, if user explicitly toggled Pan mode -> Pan
+      if (eraserToolMode === 'pan') return true
+      // Otherwise (Magic Eraser in brush mode on original image) -> Never Pan on left click!
+      return false
+    }
+    return false
+  }
+
+  // Active pan mode state for cursor display
+  const isPanMode = canPanWithButton(0)
 
   // Reset pan when image changes
   useEffect(() => {
@@ -36,26 +160,6 @@ export default function PreviewCanvas() {
     strokeHistoryRef.current = []
     setEraserMaskData(null)
   }, [imageInfo?.session_id, setEraserMaskData, setZoom])
-
-  // Track spacebar for panning in eraser mode
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !spacePressed) {
-        setSpacePressed(true)
-      }
-    }
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        setSpacePressed(false)
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
-    }
-  }, [spacePressed])
 
   // Listen for clear mask and undo mask custom events
   useEffect(() => {
@@ -93,6 +197,105 @@ export default function PreviewCanvas() {
     }
   }, [setEraserMaskData])
 
+  // Global window mousemove & mouseup listeners for seamless 1:1 dragging
+  useEffect(() => {
+    const onWindowMouseMove = (e: MouseEvent) => {
+      // If Space is held (or Alt) while left mouse button is down, dynamically initiate panning
+      const isSpace = spacePressedRef.current || isSpaceGloballyDown || e.altKey
+      if (isSpace && (e.buttons === 1 || e.buttons === 4) && !isDraggingRef.current) {
+        if (isDrawingRef.current) {
+          isDrawingRef.current = false
+          setIsDrawing(false)
+          const canvas = maskCanvasRef.current
+          if (canvas && strokeHistoryRef.current.length > 0) {
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+              const last = strokeHistoryRef.current.pop()
+              if (last) ctx.putImageData(last, 0, 0)
+            }
+          }
+          updateMaskData()
+        }
+        isDraggingRef.current = true
+        setDragging(true)
+        dragOriginRef.current = {
+          mouseX: e.clientX,
+          mouseY: e.clientY,
+          panX: panRef.current.x,
+          panY: panRef.current.y,
+        }
+      }
+
+      // 1. Panning canvas
+      if (isDraggingRef.current) {
+        if (e.buttons === 0) {
+          isDraggingRef.current = false
+          setDragging(false)
+          return
+        }
+        const dx = e.clientX - dragOriginRef.current.mouseX
+        const dy = e.clientY - dragOriginRef.current.mouseY
+        const nextPan = {
+          x: dragOriginRef.current.panX + dx,
+          y: dragOriginRef.current.panY + dy,
+        }
+        panRef.current = nextPan
+        if (viewportRef.current) {
+          viewportRef.current.style.transform = `translate(${nextPan.x}px, ${nextPan.y}px) scale(${zoomRef.current})`
+        }
+        _setPan(nextPan)
+        return
+      }
+
+      // 2. Continuous mask drawing if pointer moved outside canvas during stroke
+      if (isDrawingRef.current && maskCanvasRef.current && e.target !== maskCanvasRef.current) {
+        const canvas = maskCanvasRef.current
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          const { x, y } = getCanvasCoords(e)
+          ctx.lineTo(x, y)
+          ctx.stroke()
+        }
+        return
+      }
+
+      // 3. Split view handle dragging
+      if (draggingSplitRef.current && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        const pos = ((e.clientX - rect.left) / rect.width) * 100
+        setSplitPos(Math.max(5, Math.min(95, pos)))
+      }
+    }
+
+    const onWindowMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false
+        setDragging(false)
+      }
+      if (draggingSplitRef.current) {
+        draggingSplitRef.current = false
+        setDraggingSplit(false)
+      }
+      if (isDrawingRef.current) {
+        isDrawingRef.current = false
+        setIsDrawing(false)
+        const canvas = maskCanvasRef.current
+        if (canvas) {
+          const ctx = canvas.getContext('2d')
+          if (ctx) ctx.closePath()
+        }
+        updateMaskData()
+      }
+    }
+
+    window.addEventListener('mousemove', onWindowMouseMove)
+    window.addEventListener('mouseup', onWindowMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onWindowMouseMove)
+      window.removeEventListener('mouseup', onWindowMouseUp)
+    }
+  }, [])
+
   // Non-passive wheel event listener to prevent browser page zoom
   useEffect(() => {
     const el = containerRef.current
@@ -110,10 +313,12 @@ export default function PreviewCanvas() {
 
       setZoom((prevZoom: number) => {
         const nextZoom = Math.min(20, Math.max(0.05, prevZoom * factor))
-        setPan(prevPan => ({
-          x: mouseX - (mouseX - prevPan.x) * (nextZoom / prevZoom),
-          y: mouseY - (mouseY - prevPan.y) * (nextZoom / prevZoom),
-        }))
+        const nextPan = {
+          x: mouseX - (mouseX - panRef.current.x) * (nextZoom / prevZoom),
+          y: mouseY - (mouseY - panRef.current.y) * (nextZoom / prevZoom),
+        }
+        panRef.current = nextPan
+        _setPan(nextPan)
         return nextZoom
       })
     }
@@ -243,7 +448,7 @@ export default function PreviewCanvas() {
     }
   }
 
-  const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
     const canvas = maskCanvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
@@ -255,11 +460,52 @@ export default function PreviewCanvas() {
     }
   }
 
-  const handleBrushDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0 || spacePressed) {
-      handleMouseDown(e)
+  // Unified Pan initiation (Middle-click, Right-click, Space+drag, Pan mode)
+  const startPan = (clientX: number, clientY: number, button: number, e?: React.MouseEvent | MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false
+      setIsDrawing(false)
+      const canvas = maskCanvasRef.current
+      if (canvas && strokeHistoryRef.current.length > 0) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          const last = strokeHistoryRef.current.pop()
+          if (last) ctx.putImageData(last, 0, 0)
+        }
+      }
+      updateMaskData()
+    }
+
+    isDraggingRef.current = true
+    setDragging(true)
+    dragOriginRef.current = {
+      mouseX: clientX,
+      mouseY: clientY,
+      panX: panRef.current.x,
+      panY: panRef.current.y,
+    }
+  }
+
+  // Canvas-specific handlers for Magic Eraser mask drawing & panning
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const isSpace = spacePressedRef.current || spacePressed || isSpaceGloballyDown || e.altKey
+
+    // If Space is pressed, or Middle/Right click, or user switched to pan mode -> PAN IMMEDIATELY
+    if (isSpace || canPanWithButton(e.button, e)) {
+      startPan(e.clientX, e.clientY, e.button, e)
       return
     }
+
+    // Left click in brush mode without Space -> DRAW MASK ONLY (NEVER PAN)
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+
     const canvas = maskCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -268,11 +514,12 @@ export default function PreviewCanvas() {
     strokeHistoryRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height))
     if (strokeHistoryRef.current.length > 25) strokeHistoryRef.current.shift()
 
+    isDrawingRef.current = true
     setIsDrawing(true)
     const { x, y } = getCanvasCoords(e)
 
-    ctx.strokeStyle = 'rgba(244, 63, 94, 0.65)'
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.65)'
+    ctx.strokeStyle = 'rgba(244, 63, 94, 0.7)'
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.7)'
     ctx.lineWidth = eraserSettings.brushSize
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -285,13 +532,44 @@ export default function PreviewCanvas() {
     ctx.moveTo(x, y)
   }
 
-  const handleBrushMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setBrushPos({ x: e.clientX, y: e.clientY })
-    if (spacePressed && dragging) {
-      handleMouseMove(e)
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const isSpace = spacePressedRef.current || spacePressed || isSpaceGloballyDown || e.altKey
+    const isPan = isSpace || canPanWithButton(0, e)
+
+    // In pan mode or space held: never draw, hide brush cursor ring
+    if (isPan) {
+      if (brushPos !== null) setBrushPos(null)
+
+      // If user holds Space and left mouse button is down, ensure dragging starts
+      if (e.buttons === 1 && !isDraggingRef.current) {
+        startPan(e.clientX, e.clientY, 0, e)
+      }
+
+      // If currently dragging, update pan directly right here for 144fps responsiveness
+      if (isDraggingRef.current) {
+        const dx = e.clientX - dragOriginRef.current.mouseX
+        const dy = e.clientY - dragOriginRef.current.mouseY
+        const nextPan = {
+          x: dragOriginRef.current.panX + dx,
+          y: dragOriginRef.current.panY + dy,
+        }
+        panRef.current = nextPan
+        if (viewportRef.current) {
+          viewportRef.current.style.transform = `translate(${nextPan.x}px, ${nextPan.y}px) scale(${zoomRef.current})`
+        }
+        _setPan(nextPan)
+        return
+      }
       return
     }
-    if (!isDrawing) return
+
+    // Brush mode: track cursor for circular overlay
+    setBrushPos({ x: e.clientX, y: e.clientY })
+
+    if (!isDrawingRef.current) return
+    e.preventDefault()
+    e.stopPropagation()
+
     const canvas = maskCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -302,8 +580,13 @@ export default function PreviewCanvas() {
     ctx.stroke()
   }
 
-  const handleBrushUp = () => {
-    if (isDrawing) {
+  const handleCanvasMouseUp = () => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false
+      setDragging(false)
+    }
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false
       setIsDrawing(false)
       const canvas = maskCanvasRef.current
       if (canvas) {
@@ -312,36 +595,10 @@ export default function PreviewCanvas() {
       }
       updateMaskData()
     }
-    if (dragging) {
-      handleMouseUp()
-    }
   }
 
-  // Pan handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 && e.button !== 1 && e.button !== 2) return
-    setDragging(true)
-    setLastMouse({ x: e.clientX, y: e.clientY })
-  }
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (dragging) {
-      setPan(p => ({
-        x: p.x + (e.clientX - lastMouse.x),
-        y: p.y + (e.clientY - lastMouse.y),
-      }))
-      setLastMouse({ x: e.clientX, y: e.clientY })
-    }
-    if (draggingSplit && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      const pos = ((e.clientX - rect.left) / rect.width) * 100
-      setSplitPos(Math.max(5, Math.min(95, pos)))
-    }
-  }
-
-  const handleMouseUp = () => {
-    setDragging(false)
-    setDraggingSplit(false)
+  const handleCanvasMouseLeave = () => {
+    setBrushPos(null)
   }
 
   const zoomIn  = () => setZoom((z: number) => Math.min(20, z * 1.4))
@@ -406,16 +663,23 @@ export default function PreviewCanvas() {
     <div
       className="preview-area checkerboard"
       ref={containerRef}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      tabIndex={0}
+      onMouseDown={(e) => {
+        if (canPanWithButton(e.button, e)) {
+          startPan(e.clientX, e.clientY, e.button, e)
+        }
+      }}
+      onContextMenu={(e) => e.preventDefault()}
       style={{
         position: 'relative',
         flex: 1,
         minHeight: 0,
         overflow: 'hidden',
         touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        outline: 'none',
+        cursor: isPanMode ? (dragging ? 'grabbing' : 'grab') : (activeTool === 'eraser' ? 'crosshair' : 'grab'),
       }}
     >
       {/* View Mode Toolbar */}
@@ -455,9 +719,17 @@ export default function PreviewCanvas() {
       {!showSplit ? (
         <div
           className="preview-viewport"
-          style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
         >
-          <div style={transformStyle}>
+          <div ref={viewportRef} style={transformStyle}>
             {processedInfo.isVector ? (
               <img
                 src={currentUrl!}
@@ -468,11 +740,13 @@ export default function PreviewCanvas() {
                   width: imageInfo.width,
                   height: imageInfo.height,
                   imageRendering: 'auto',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
                 }}
                 draggable={false}
               />
             ) : (
-              <div style={{ position: 'relative', display: 'inline-block', width: displayWidth, height: displayHeight }}>
+              <div style={{ position: 'relative', display: 'inline-block', width: displayWidth, height: displayHeight, userSelect: 'none' }}>
                 <img
                   src={currentUrl!}
                   alt="Preview"
@@ -482,6 +756,8 @@ export default function PreviewCanvas() {
                     width: displayWidth,
                     height: displayHeight,
                     imageRendering: zoom >= 4 ? 'pixelated' : 'auto',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
                   }}
                   draggable={false}
                 />
@@ -491,19 +767,22 @@ export default function PreviewCanvas() {
                     ref={maskCanvasRef}
                     width={imageInfo.width}
                     height={imageInfo.height}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
                     style={{
                       position: 'absolute',
                       inset: 0,
                       width: '100%',
                       height: '100%',
-                      cursor: spacePressed ? 'grab' : 'crosshair',
+                      cursor: isPanMode ? (dragging ? 'grabbing' : 'grab') : 'crosshair',
                       zIndex: 10,
                       touchAction: 'none',
+                      userSelect: 'none',
                     }}
-                    onMouseDown={handleBrushDown}
-                    onMouseMove={handleBrushMove}
-                    onMouseUp={handleBrushUp}
-                    onMouseLeave={() => { setBrushPos(null); handleBrushUp() }}
+                    onMouseDown={handleCanvasMouseDown}
+                    onMouseMove={handleCanvasMouseMove}
+                    onMouseUp={handleCanvasMouseUp}
+                    onMouseLeave={handleCanvasMouseLeave}
                   />
                 )}
               </div>
@@ -512,7 +791,7 @@ export default function PreviewCanvas() {
         </div>
       ) : (
         /* Split View */
-        <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}>
           {/* Floating Indicators */}
           <div style={{
             position: 'absolute', top: 12, left: 16, zIndex: 10,
@@ -546,7 +825,7 @@ export default function PreviewCanvas() {
               <img
                 src={imageInfo.preview_url}
                 alt="Original"
-                style={{ maxWidth: 'none', width: imageInfo.width, height: imageInfo.height }}
+                style={{ maxWidth: 'none', width: imageInfo.width, height: imageInfo.height, pointerEvents: 'none', userSelect: 'none' }}
                 draggable={false}
               />
             </div>
@@ -563,7 +842,7 @@ export default function PreviewCanvas() {
               <img
                 src={processedInfo.url!}
                 alt="Processed"
-                style={{ maxWidth: 'none', width: imageInfo.width, height: imageInfo.height }}
+                style={{ maxWidth: 'none', width: imageInfo.width, height: imageInfo.height, pointerEvents: 'none', userSelect: 'none' }}
                 draggable={false}
               />
             </div>
@@ -580,7 +859,12 @@ export default function PreviewCanvas() {
               transform: 'translateX(-50%)',
               boxShadow: '0 0 8px var(--accent-glow)',
             }}
-            onMouseDown={(e) => { e.stopPropagation(); setDraggingSplit(true) }}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              draggingSplitRef.current = true
+              setDraggingSplit(true)
+            }}
           >
             <div style={{
               position: 'absolute', top: '50%', left: '50%',
@@ -597,7 +881,7 @@ export default function PreviewCanvas() {
       )}
 
       {/* Floating Circular Brush Cursor for Eraser */}
-      {activeTool === 'eraser' && brushPos && !spacePressed && (
+      {activeTool === 'eraser' && viewMode === 'original' && brushPos && !isPanMode && (
         <div
           style={{
             position: 'fixed',

@@ -303,8 +303,7 @@ export default function VectorizerPanel() {
             }}
             title={`Automatically apply the best settings tailored for ${analysisResult.recommended_mode.toUpperCase()} images`}
           >
-            <span>⚡</span>
-            <span>Use Recommended Settings ({analysisResult.recommended_mode.toUpperCase()})</span>
+            <span>Recommended Settings</span>
           </button>
 
           {appliedRecommended && (
