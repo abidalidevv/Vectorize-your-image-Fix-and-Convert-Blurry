@@ -8,14 +8,14 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Rust Engine](https://img.shields.io/badge/VTracer-Rust%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=black)](https://github.com/visioncortex/vtracer)
 [![Pytest](https://img.shields.io/badge/Pytest-23%2F23%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests/test_vectorforge.py)
-[![Version](https://img.shields.io/badge/Version-1.1.0%20Pro-blueviolet?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0%20Pro-blueviolet?style=for-the-badge)](md/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Author](https://img.shields.io/badge/Author-Abid%20Ali-blueviolet?style=for-the-badge&logo=google-chrome&logoColor=white)](https://abidalidev.com)
 [![GitHub Profile](https://img.shields.io/badge/GitHub-abidalidevv-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/abidalidevv)
 
 **Fix blurry logos, icons, and illustrations. Convert low-res raster images into crisp, infinitely scalable vector graphics (SVG) — 100% locally on your machine.**
 
-[Explore Features](#-key-features) • [Quick Start](#-quick-start-guide) • [Live Diagnostics](diagnose.html) • [Master Docs](documentation.html) • [Architecture](#-architecture) • [API Reference](#-api-endpoints) • [Developer Guide](CLAUDE.md) • [Portfolio](https://abidalidev.com)
+[Explore Features](#-key-features) • [Quick Start](#-quick-start-guide) • [Live Diagnostics](docs/diagnose.html) • [Master Docs](docs/documentation.html) • [Architecture](#-architecture) • [API Reference](#-api-endpoints) • [Documentation Hub](md/README.md) • [Portfolio](https://abidalidev.com)
 
 </div>
 
@@ -187,15 +187,20 @@ vectorforge-ai/
 │   │   └── api/client.ts                # Axios REST client
 │   └── vite.config.ts                   # Vite config with backend proxy
 │
-├── scripts/
-│   └── download_pro_models.py           # Resumable multi-model downloader CLI
-├── documentation.html                   # Master documentation (root)
-├── diagnose.html                        # Live telemetry dashboard (root)
-├── docs/                                # Screenshots & doc replicas
-├── samples/                             # Test assets (logos, sketches, photos)
-├── CLAUDE.md                            # Complete Developer & AI Assistant Guide
-├── BRAIN.md                             # Architectural memory & decisions
-└── CHANGELOG.md                         # Release history
+├── docs/                                # Master HTML documentation, diagnostics & screenshots
+│   ├── documentation.html               # Master comprehensive settings guide
+│   ├── diagnose.html                    # Hardware & model telemetry dashboard
+│   └── screenshots/                     # 2000% zoom & studio feature galleries
+├── md/                                  # Centralized Markdown documentation hub
+│   ├── README.md                        # Documentation index & reading guide
+│   ├── CLAUDE.md                        # Complete developer manual & API reference
+│   ├── BRAIN.md                         # Architectural memory & system design
+│   ├── CHANGELOG.md                     # Version history & release notes
+│   ├── CHAT_TRANSCRIPT.md               # Development audit trail & execution log
+│   └── TODO.md                          # Roadmap & completed milestones
+├── tests/                               # Test suites, benchmarks & verification scripts
+├── scripts/                             # Model downloaders & automation scripts
+└── samples/                             # Test assets (logos, sketches, photos)
 ```
 
 ---
