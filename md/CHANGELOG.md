@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-09-07
+
+### Fixed
+- **Primitive Detector Line Deduplication**: Fixed axis-specific line deduplication logic in `detect_primitives()` so horizontal lines with identical coordinates are correctly merged rather than splitting into double lines.
+- **Continuous Border & Outline Preservation**: Replaced pure percentage-based color merging in `vtracer_engine.py` with `cv2.connectedComponentsWithStats` continuity checks. Legitimate thin outlines and borders (e.g. triangle stroke) with large continuous pixel length are preserved and never merged into adjacent fill clusters.
+- **Planar Cutout Hierarchy Enforcement**: Enforced `hierarchical: "cutout"` across presets and `engine_selector.py`. Eliminates SVG layer overlap, outline erasure, and underlying solid ghost wedges.
+- **Opaque Base Background Rect**: Automatically adds a canvas-fitting background rect for opaque images in cutout mode, eliminating sub-pixel antialiasing transparency gaps (`0 transparent seam holes`).
+
+### Added
+- **1-Click AI Models Downloader**: Added `download_models.bat` (Windows) and `download_models.sh` (Linux/macOS) in repository root to verify caches and download all required neural weights (GFPGAN, YuNet, LaMa, Real-ESRGAN, BiRefNet, ISNet) with one click.
+
+---
+
 ## [1.2.0] - 2026-09-06
 
 ### Added

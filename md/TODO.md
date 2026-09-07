@@ -4,6 +4,15 @@ Future enhancements and planned features for subsequent versions of Vectorizer A
 
 ---
 
+## Completed in v1.2.1
+- [x] **Primitive Detector Line Deduplication**: Fixed axis-specific line deduplication for horizontal and vertical lines to avoid splitting into 2 lines.
+- [x] **Continuous Thin Border Preservation**: Implemented `connectedComponentsWithStats` filter so thin continuous strokes (triangle border) never merge into nearby colors.
+- [x] **Planar Cutout Hierarchy Enforcement**: Enforced `cutout` hierarchy across VTracer presets to prevent layer overlap and hidden solid wedges.
+- [x] **Opaque Base Background Rect**: Added automatic base background rect for opaque images to prevent sub-pixel antialiasing transparency gaps.
+- [x] **1-Click AI Model Downloader**: Added `download_models.bat` (Windows) & `download_models.sh` (Linux/Mac) for instant offline setup.
+
+---
+
 ## Completed in v1.1.0 (Pro Tier)
 - [x] **AI Background Remover Studio**:
   - [x] Fast Tier segmentation model (`isnet-general-use`, ~178.6MB ONNX).
