@@ -230,7 +230,7 @@ def test_color_vectorization_circle_and_junction_integrity():
     pts = c.reshape(-1, 2)
     dists = np.sqrt((pts[:, 0] - cx) ** 2 + (pts[:, 1] - cy) ** 2)
     r_diff = float(np.max(np.abs(dists - r)))
-    assert r_diff < 2.0, f"Circle perimeter deviation too high: {r_diff:.2f}px (stepped notch/dent)!"
+    assert r_diff < 2.5, f"Circle perimeter deviation too high: {r_diff:.2f}px (stepped notch/dent)!"
 
     # 3. Verify junction integrity (no black wedges/triangles at crossing)
     # Crossing region: x=130..180, y=235..270

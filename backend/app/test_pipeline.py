@@ -1,7 +1,7 @@
 """Quick pipeline test"""
 import sys
-sys.path.insert(0, '.')
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from image_processing.analyzer import analyze_image
 from image_processing.quantizer import quantize_image
 from vectorization.vtracer_engine import VTracerEngine

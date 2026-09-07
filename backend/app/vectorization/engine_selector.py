@@ -48,10 +48,10 @@ def select_and_trace(
             result = _contour_engine.trace(image_path, output_svg_path, params)
         return result
 
-    # All other modes (color, logo, photo) -> VTracer color mode
+    # All other modes (color, logo, photo, auto) -> VTracer color mode
     logger.info(f"Engine: VTracer (color, mode={mode})")
-    if mode == "logo" and "hierarchical" not in params:
-        params["hierarchical"] = "cutout"
+    if "hierarchical" not in params:
+        params["hierarchical"] = "stacked" if mode == "photo" else "cutout"
     result = _vtracer_engine.trace(image_path, output_svg_path, params)
 
     if not result["success"]:

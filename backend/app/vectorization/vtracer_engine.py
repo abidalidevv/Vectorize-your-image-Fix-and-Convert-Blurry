@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 QUALITY_PRESETS = {
     "fast": {
         "colormode": "color",
-        "hierarchical": "stacked",
+        "hierarchical": "cutout",
         "mode": "polygon",
         "filter_speckle": 2,
         "color_precision": 4,
@@ -34,7 +34,7 @@ QUALITY_PRESETS = {
     },
     "balanced": {
         "colormode": "color",
-        "hierarchical": "stacked",
+        "hierarchical": "cutout",
         "mode": "spline",
         "filter_speckle": 1,
         "color_precision": 7,
@@ -47,7 +47,7 @@ QUALITY_PRESETS = {
     },
     "high": {
         "colormode": "color",
-        "hierarchical": "stacked",
+        "hierarchical": "cutout",
         "mode": "spline",
         "filter_speckle": 1,
         "color_precision": 7,
@@ -60,7 +60,7 @@ QUALITY_PRESETS = {
     },
     "ultra": {
         "colormode": "color",
-        "hierarchical": "stacked",
+        "hierarchical": "cutout",
         "mode": "spline",
         "filter_speckle": 0,
         "color_precision": 8,
@@ -91,7 +91,7 @@ class VTracerEngine(AbstractTracer):
             preset = QUALITY_PRESETS.get(preset_name, QUALITY_PRESETS["balanced"]).copy()
 
             colormode = "color"
-            hierarchical = params.get("hierarchical") or preset.get("hierarchical", "stacked")
+            hierarchical = params.get("hierarchical") or preset.get("hierarchical", "cutout")
             mode = self._get_mode(params)
             filter_speckle = int(params.get("filter_speckle", preset["filter_speckle"]))
             color_precision = int(params.get("color_precision", preset["color_precision"]))
@@ -129,9 +129,33 @@ class VTracerEngine(AbstractTracer):
             quant_result = quantize_image(trace_image_path, pre_quantize_path, num_colors=num_colors, method="auto")
 
             # Merge tiny anti-aliasing/blend color clusters into their nearest major color
-            MIN_COLOR_AREA_PCT = 0.7  # Colors covering < 0.7% of pixels are edge blends/slivers
-            small_colors = [p for p in quant_result["palette"] if p["percentage"] < MIN_COLOR_AREA_PCT]
+            MIN_COLOR_AREA_PCT = 0.7
+            MAX_ANTIALIAS_COMPONENT_PX = 40  # Blobs larger than this are real elements (borders/lines), not edge blends
+
+            candidate_small = [p for p in quant_result["palette"] if p["percentage"] < MIN_COLOR_AREA_PCT]
             major_colors = [p for p in quant_result["palette"] if p["percentage"] >= MIN_COLOR_AREA_PCT]
+
+            small_colors = []
+            if candidate_small and major_colors:
+                import numpy as np
+                from PIL import Image
+
+                img_arr_check = np.array(Image.open(pre_quantize_path).convert("RGB"))
+                for sc in candidate_small:
+                    sc_rgb = np.array(sc["rgb"])
+                    mask = np.all(img_arr_check == sc_rgb, axis=-1).astype(np.uint8)
+                    if not mask.any():
+                        continue
+                    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+                    # stats[0] is background, skip it
+                    max_component_size = stats[1:, cv2.CC_STAT_AREA].max() if num_labels > 1 else 0
+                    if max_component_size <= MAX_ANTIALIAS_COMPONENT_PX:
+                        small_colors.append(sc)
+                    else:
+                        logger.info(
+                            f"Keeping color {sc['hex']} (pct={sc['percentage']:.2f}%) — "
+                            f"largest component {max_component_size}px looks like a real border, not anti-alias blend"
+                        )
 
             if small_colors and major_colors:
                 import numpy as np
@@ -197,18 +221,28 @@ class VTracerEngine(AbstractTracer):
                 except Exception:
                     pass
 
-            if used_scale > 1 and output_svg_path.exists():
+            if output_svg_path.exists():
                 svg_content = output_svg_path.read_text(encoding="utf-8")
                 import re
 
-                def fix_root(m):
-                    tag = m.group(0)
-                    tag = re.sub(r'\s+width="[^"]*"', '', tag)
-                    tag = re.sub(r'\s+height="[^"]*"', '', tag)
-                    tag = re.sub(r'\s+viewBox="[^"]*"', '', tag)
-                    return f'{tag[:-1]} width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w * used_scale} {orig_h * used_scale}">'
+                if used_scale > 1:
+                    def fix_root(m):
+                        tag = m.group(0)
+                        tag = re.sub(r'\s+width="[^"]*"', '', tag)
+                        tag = re.sub(r'\s+height="[^"]*"', '', tag)
+                        tag = re.sub(r'\s+viewBox="[^"]*"', '', tag)
+                        return f'{tag[:-1]} width="{orig_w}" height="{orig_h}" viewBox="0 0 {orig_w * used_scale} {orig_h * used_scale}">'
 
-                svg_content = re.sub(r'<svg\b[^>]*>', fix_root, svg_content, count=1)
+                    svg_content = re.sub(r'<svg\b[^>]*>', fix_root, svg_content, count=1)
+
+                # For opaque images in cutout mode, add base rect of dominant background
+                # to prevent sub-pixel seam antialiasing bleed between adjacent cutout polygons
+                has_alpha = orig_img is not None and len(orig_img.shape) == 3 and orig_img.shape[2] == 4 and np.any(orig_img[:, :, 3] < 255)
+                if not has_alpha and quant_result.get("palette"):
+                    bg_color = quant_result["palette"][0]["hex"]
+                    bg_rect = f'<rect width="100%" height="100%" fill="{bg_color}"/>'
+                    svg_content = re.sub(r'(<svg\b[^>]*>)', r'\1' + bg_rect, svg_content, count=1)
+
                 output_svg_path.write_text(svg_content, encoding="utf-8")
 
             svg_size = output_svg_path.stat().st_size if output_svg_path.exists() else 0
