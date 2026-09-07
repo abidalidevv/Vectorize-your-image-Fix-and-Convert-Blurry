@@ -2,7 +2,7 @@
 
 > **System Memory Bank, Technical Blueprint & Agent Hand-off Guide**  
 > **Author**: [Abid Ali](https://abidalidev.com) • [GitHub (@abidalidevv)](https://github.com/abidalidevv) • **Repository**: [Vectorize-your-image-Fix-and-Convert-Blurry](https://github.com/abidalidevv/Vectorize-your-image-Fix-and-Convert-Blurry)  
-> **Version**: `1.1.0` (Pro Tier) • **Status**: Production-Ready, 21/21 Unit Tests Verified & Tested 100% Locally
+> **Version**: `1.2.1` (Pro Tier) • **Status**: Production-Ready, 23/23 Unit Tests Verified & Tested 100% Locally
 
 ---
 
@@ -246,8 +246,10 @@ When continuing or extending VectorForge AI:
 5. **Keep Tooltips Positioned Downward**:
    - Any new buttons placed in `TopBar` must specify `data-tooltip-pos="bottom"`.
 6. **Color vs. Line Art Hierarchy Rule (CRITICAL)**:
-   - For color vectorization (`trace`), always maintain `hierarchical="stacked"`. `cutout` mode creates floating-point Bézier seam gaps (visible as black triangular wedges over dark canvas) and splits circular rims into disjoint halves with stepped notches. `stacked` mode guarantees 0 seam gaps, unbroken circular arcs, and clean intersecting lines.
-   - For monochrome line art / technical drawings, `trace_bw` uses `cutout` with `filter_speckle=0` to preserve fine concentric circles without background polygon occlusion.
+   - For all non-photo vectorization (`auto`, `logo`, `color`), always enforce `hierarchical="cutout"`. `stacked` mode fills outer shapes as solid polygons and stacks inner fills on top, which causes curve-fitting mismatches to create giant protruding dark wedges and boundary leaks.
+   - `cutout` mode guarantees all paths are non-overlapping planar pieces, completely preventing ghost wedges.
+   - Sub-pixel antialiasing edge seams in cutout mode are eliminated by automatic insertion of `<rect width="100%" height="100%" fill="{bg_color}"/>` matching the dominant background of opaque images.
+   - Fine continuous outlines (e.g. dark brown triangle borders) are protected by `cv2.connectedComponentsWithStats` (`MAX_ANTIALIAS_COMPONENT_PX = 40`), distinguishing long continuous strokes from isolated corner blend artifacts.
 7. **Text & Typography Vectorization**:
    - Raster text is converted into resolution-independent Bézier glyph paths (`<path>`).
    - Letters with inner holes ('O', 'A', 'P', 'B', etc.) use compound SVG paths to ensure transparent counters.
